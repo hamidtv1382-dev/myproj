@@ -1,0 +1,653 @@
+﻿using Catalog_Service.src._01_Domain.Core.Contracts.Repositories;
+using Catalog_Service.src._01_Domain.Core.Entities;
+using Catalog_Service.src._01_Domain.Core.Enums;
+using Catalog_Service.src._01_Domain.Core.Primitives;
+using Catalog_Service.src._02_Infrastructure.Data.Db;
+using Catalog_Service.src.CrossCutting.Exceptions;
+using Dapper;
+using Microsoft.EntityFrameworkCore;
+using System.Collections.Generic;
+using System.Data;
+using System.Linq;
+using System.Reflection;
+using System.Threading;
+using System.Threading.Tasks;
+
+namespace Catalog_Service.src._02_Infrastructure.Data.Repositories
+{
+    public class ProductRepository : IProductRepository
+    {
+        private readonly AppDbContext _dbContext;
+
+        public ProductRepository(AppDbContext dbContext)
+        {
+            _dbContext = dbContext;
+        }
+
+        public async Task<Product> GetByIdAsync(int id, CancellationToken cancellationToken = default)
+        {
+            return await _dbContext.Products
+                .Include(p => p.Brand)
+                .Include(p => p.Category)
+                .Include(p => p.Images)
+                .Include(p => p.Variants)
+                .Include(p => p.Attributes)
+                .Include(p => p.Reviews)
+                .Include(p => p.Tags)
+                .FirstOrDefaultAsync(p => p.Id == id && !p.IsDeleted && p.IsApproved, cancellationToken);
+        }
+        public async Task<Product> GetByIdVendorAsync(int id, CancellationToken cancellationToken = default)
+        {
+            return await _dbContext.Products
+                .Include(p => p.Brand)
+                .Include(p => p.Category)
+                .Include(p => p.Images)
+                .Include(p => p.Variants)
+                .Include(p => p.Attributes)
+                .Include(p => p.Reviews)
+                .Include(p => p.Tags)
+                .FirstOrDefaultAsync(p => p.Id == id && !p.IsDeleted, cancellationToken);
+        }
+        public async Task<Product?> GetBySkuAsync(string sku, CancellationToken cancellationToken = default)
+        {
+            return await _dbContext.Products
+                .Include(p => p.Brand)
+                .Include(p => p.Category)
+                .FirstOrDefaultAsync(p => p.Sku == sku && !p.IsDeleted && p.IsApproved, cancellationToken);
+        }
+
+
+        public async Task<Product> GetBySlugAsync(Slug slug, CancellationToken cancellationToken = default)
+        {
+            return await _dbContext.Products
+                .Include(p => p.Brand)
+                .Include(p => p.Category)
+                .Include(p => p.Images)
+                .Include(p => p.Variants)
+                .Include(p => p.Attributes)
+                .Include(p => p.Reviews)
+                .Include(p => p.Tags)
+                .FirstOrDefaultAsync(p => p.Slug == slug && !p.IsDeleted && p.IsApproved, cancellationToken);
+        }
+
+        public async Task<IEnumerable<Product>> GetAllAsync(CancellationToken cancellationToken = default)
+        {
+            return await _dbContext.Products
+                .Where(p => !p.IsDeleted && p.IsApproved)
+                .Include(p => p.Brand)
+                .Include(p => p.Category)
+                .ToListAsync(cancellationToken);
+        }
+
+        public async Task<IEnumerable<Product>> GetActiveProductsAsync(CancellationToken cancellationToken = default)
+        {
+            return await _dbContext.Products
+                .Where(p => p.Status == ProductStatus.Published && !p.IsDeleted && p.IsApproved)
+                .Include(p => p.Brand)
+                .Include(p => p.Category)
+                .ToListAsync(cancellationToken);
+        }
+
+        public async Task<Product> AddAsync(Product product, CancellationToken cancellationToken = default)
+        {
+            await _dbContext.Products.AddAsync(product, cancellationToken);
+            return product;
+        }
+
+        public void Update(Product product)
+        {
+            _dbContext.Products.Update(product);
+        }
+
+        public void Remove(Product product)
+        {
+            // Soft Delete Implementation
+            var entry = _dbContext.Entry(product);
+            if (entry.State == EntityState.Detached)
+            {
+                _dbContext.Products.Attach(product);
+            }
+
+            var isDeletedProperty = product.GetType().GetProperty("IsDeleted");
+            if (isDeletedProperty != null && isDeletedProperty.CanWrite)
+            {
+                isDeletedProperty.SetValue(product, true);
+            }
+
+            _dbContext.Products.Update(product);
+        }
+
+        public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+        {
+            return await _dbContext.SaveChangesAsync(cancellationToken);
+        }
+
+        // --- متدهای جدید ادمین ---
+
+        public async Task<IEnumerable<Product>> GetAllForAdminAsync(CancellationToken cancellationToken = default)
+        {
+            // ادمین تمام محصولات را می‌بیند، حتی تایید نشده‌ها (اما نه حذف شده‌ها)
+            return await _dbContext.Products
+                .Where(p => !p.IsDeleted) // فقط آیتم‌های حذف شده فیلتر می‌شوند
+                .Include(p => p.Brand)
+                .Include(p => p.Category)
+                .ToListAsync(cancellationToken);
+        }
+
+        public async Task SetApprovalStatusAsync(int productId, bool isApproved, CancellationToken cancellationToken = default)
+        {
+            // دریافت محصول از دیتابیس
+            var product = await _dbContext.Products.FindAsync(new object[] { productId }, cancellationToken);
+
+            // اگر محصول وجود داشت و حذف نشده بود
+            if (product != null && !product.IsDeleted)
+            {
+                // اگر setter عمومی است، مستقیم مقدار بده
+                var property = product.GetType().GetProperty("IsApproved");
+                if (property != null && property.CanWrite)
+                {
+                    property.SetValue(product, isApproved);
+                }
+
+                // ذخیره تغییرات در دیتابیس
+                await _dbContext.SaveChangesAsync(cancellationToken);
+            }
+            else
+            {
+                throw new NotFoundException("Product", productId);
+            }
+        }
+
+
+        // -------------------------------
+
+        public async Task<IEnumerable<Product>> GetByCategoryAsync(int categoryId, CancellationToken cancellationToken = default)
+        {
+            return await _dbContext.Products
+                .Where(p => p.CategoryId == categoryId && p.Status == ProductStatus.Published && !p.IsDeleted && p.IsApproved)
+                .Include(p => p.Brand)
+                .Include(p => p.Category)
+                .ToListAsync(cancellationToken);
+        }
+
+        public async Task<IEnumerable<Product>> GetByBrandAsync(int brandId, CancellationToken cancellationToken = default)
+        {
+            return await _dbContext.Products
+                .Where(p => p.BrandId == brandId && p.Status == ProductStatus.Published && !p.IsDeleted && p.IsApproved)
+                .Include(p => p.Brand)
+                .Include(p => p.Category)
+                .ToListAsync(cancellationToken);
+        }
+
+        public async Task<IEnumerable<Product>> GetByPriceRangeAsync(Money minPrice, Money maxPrice, CancellationToken cancellationToken = default)
+        {
+            // نکته: این متد از Value Object مستقیماً استفاده می‌کند که ممکن است در SQL مشکل ساز شود
+            // اما چون معمولاً رنج محدود است، فعلاً به همین شکل باقی می‌ماند.
+            // اگر خطا داد، باید مثل GetPagedAsync به حافظه منتقل شود.
+            return await _dbContext.Products
+                .Where(p => p.Price.Amount >= minPrice.Amount && p.Price.Amount <= maxPrice.Amount && p.Status == ProductStatus.Published && !p.IsDeleted && p.IsApproved)
+                .Include(p => p.Brand)
+                .Include(p => p.Category)
+                .ToListAsync(cancellationToken);
+        }
+
+        public async Task<IEnumerable<Product>> GetFeaturedProductsAsync(int count, CancellationToken cancellationToken = default)
+        {
+            return await _dbContext.Products
+                .Where(p => p.IsFeatured && p.Status == ProductStatus.Published && !p.IsDeleted && p.IsApproved)
+                .Include(p => p.Brand)
+                .Include(p => p.Category)
+                .OrderByDescending(p => p.CreatedAt)
+                .Take(count)
+                .ToListAsync(cancellationToken);
+        }
+
+        public async Task<IEnumerable<Product>> GetNewestProductsAsync(int count, CancellationToken cancellationToken = default)
+        {
+            return await _dbContext.Products
+                .Where(p => p.Status == ProductStatus.Published && !p.IsDeleted && p.IsApproved)
+                .Include(p => p.Brand)
+                .Include(p => p.Category)
+                .OrderByDescending(p => p.CreatedAt)
+                .Take(count)
+                .ToListAsync(cancellationToken);
+        }
+
+        public async Task<IEnumerable<Product>> GetBestSellingProductsAsync(int count, CancellationToken cancellationToken = default)
+        {
+            return await _dbContext.Products
+                .Where(p => p.Status == ProductStatus.Published && !p.IsDeleted && p.IsApproved)
+                .Include(p => p.Brand)
+                .Include(p => p.Category)
+                .OrderByDescending(p => p.ViewCount)
+                .Take(count)
+                .ToListAsync(cancellationToken);
+        }
+
+        // --- متد اصلی با استفاده از Dapper ---
+        public async Task<(IEnumerable<Product> Products, int TotalCount)> GetPagedAsync(
+            int pageNumber,
+            int pageSize,
+            string searchTerm = null,
+            int? categoryId = null,
+            int? brandId = null,
+            ProductStatus? status = null,
+            decimal? minPrice = null,
+            decimal? maxPrice = null,
+            string sortBy = null,
+            bool sortAscending = true,
+            CancellationToken cancellationToken = default)
+        {
+            // 1. تعریف کوئری خام SQL (همان چیزی که خواستید)
+            const string sql = @"
+                SELECT 
+                    p.*, 
+                    c.*,
+                    b.*
+                FROM Products AS p
+                LEFT JOIN Categories AS c ON p.CategoryId = c.Id
+                LEFT JOIN Brands AS b ON p.BrandId = b.Id
+                WHERE p.IsDeleted = 0 AND p.IsApproved = 1";
+
+            // 2. دریافت کانکشن Dapper
+            // فرض بر این است که شما یک سازنده یا روشی برای دسترسی به DbConnection دارید.
+            // اگر این خط را ندارید، باید IDbConnection را در Repository تزریق کنید.
+            using var connection = _dbContext.Database.GetDbConnection();
+
+            if (connection.State != ConnectionState.Open)
+                await connection.OpenAsync(cancellationToken);
+
+            // 3. اجرای کوئری با Dapper و Map کردن دستی به آبجکت‌ها
+            // Dapper دو تا جوین (Category و Brand) را به Product اضافه می‌کند
+            var productDict = new Dictionary<int, Product>();
+
+            await connection.QueryAsync<Product, Category, Brand, Product>(
+                sql,
+                (product, category, brand) =>
+                {
+                    // مدیریت تکراری بودن ردیف‌های جوین
+                    if (!productDict.TryGetValue(product.Id, out var existingProduct))
+                    {
+                        productDict.Add(product.Id, product);
+                        existingProduct = product;
+                    }
+
+                    // تنظیم دستی Navigation Properties (چون Dapper این کار را انجام نمی‌دهد)
+                    // از Reflection استفاده می‌کنیم چون Setterها private هستند
+                    if (category != null)
+                        SetPrivateProperty(existingProduct, "Category", category);
+
+                    if (brand != null)
+                        SetPrivateProperty(existingProduct, "Brand", brand);
+
+                    return existingProduct;
+                },
+                splitOn: "Id" // Dapper هر بار که ستون Id ببیند جدول جدید را شروع می‌کند
+            );
+
+            var rawProducts = productDict.Values.ToList();
+
+            // 4. اعمال فیلترها و مرتب‌سازی در حافظه (روی خروجی Dapper)
+            return ApplyInMemoryLogic(rawProducts, pageNumber, pageSize, searchTerm, categoryId, brandId, status, minPrice, maxPrice, sortBy, sortAscending);
+        }
+
+        // --- متد کمکی: پر کردن پراپرتی‌های Private ---
+        private void SetPrivateProperty(object obj, string propertyName, object value)
+        {
+            if (obj == null || value == null) return;
+
+            var prop = obj.GetType().GetProperty(propertyName, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+            if (prop != null && prop.CanWrite)
+            {
+                prop.SetValue(obj, value, null);
+            }
+            else
+            {
+                // اگر پراپرتی set خصوصی بود، از فیلد پشتیبان استفاده می‌کنیم
+                var field = obj.GetType().GetField($"<{propertyName}>k__BackingField", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                field?.SetValue(obj, value);
+            }
+        }
+
+        // --- متد کمکی: پردازش در حافظه ---
+        private (IEnumerable<Product> Products, int TotalCount) ApplyInMemoryLogic(
+            List<Product> products,
+            int pageNumber,
+            int pageSize,
+            string searchTerm,
+            int? categoryId,
+            int? brandId,
+            ProductStatus? status,
+            decimal? minPrice,
+            decimal? maxPrice,
+            string sortBy,
+            bool sortAscending)
+        {
+            IEnumerable<Product> query = products;
+
+            // --- فیلترها (چون روی لیست در حافظه است، هر نوع شرطی را قبول می‌کند) ---
+
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                query = query.Where(p => p.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) || p.Description.Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (categoryId.HasValue)
+            {
+                query = query.Where(p => p.CategoryId == categoryId.Value);
+            }
+
+            if (brandId.HasValue)
+            {
+                query = query.Where(p => p.BrandId == brandId.Value);
+            }
+
+            if (status.HasValue)
+            {
+                query = query.Where(p => p.Status == status.Value);
+            }
+
+            // فیلتر موجودی (اگر Published بود)
+            if (status.HasValue && status.Value == ProductStatus.Published)
+            {
+                query = query.Where(p => p.StockQuantity > 0);
+            }
+
+            // فیلتر قیمت
+            if (minPrice.HasValue)
+            {
+                query = query.Where(p => p.Price.Amount >= minPrice.Value);
+            }
+
+            if (maxPrice.HasValue)
+            {
+                query = query.Where(p => p.Price.Amount <= maxPrice.Value);
+            }
+
+            // --- مرتب‌سازی ---
+            query = sortBy switch
+            {
+                "name" => sortAscending ? query.OrderBy(p => p.Name) : query.OrderByDescending(p => p.Name),
+                "price" => sortAscending ? query.OrderBy(p => p.Price.Amount) : query.OrderByDescending(p => p.Price.Amount),
+                "date" => sortAscending ? query.OrderBy(p => p.CreatedAt) : query.OrderByDescending(p => p.CreatedAt),
+                "rating" => sortAscending ?
+                    query.OrderBy(p => p.Reviews.Any() ? p.Reviews.Average(r => r.Rating) : 0) :
+                    query.OrderByDescending(p => p.Reviews.Any() ? p.Reviews.Average(r => r.Rating) : 0),
+                _ => query.OrderByDescending(p => p.CreatedAt)
+            };
+
+            var totalCount = query.Count();
+
+            // --- صفحه بندی ---
+            var pagedProducts = query
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            return (pagedProducts, totalCount);
+        }
+
+        public async Task<IEnumerable<Product>> GetByStatusAsync(ProductStatus status, CancellationToken cancellationToken = default)
+        {
+            return await _dbContext.Products
+                .Where(p => p.Status == status && !p.IsDeleted && p.IsApproved)
+                .Include(p => p.Brand)
+                .Include(p => p.Category)
+                .ToListAsync(cancellationToken);
+        }
+
+        public async Task<IEnumerable<Product>> GetOutOfStockProductsAsync(CancellationToken cancellationToken = default)
+        {
+            return await _dbContext.Products
+                .Where(p => p.StockStatus == StockStatus.OutOfStock && !p.IsDeleted && p.IsApproved)
+                .Include(p => p.Brand)
+                .Include(p => p.Category)
+                .ToListAsync(cancellationToken);
+        }
+
+        public async Task<IEnumerable<Product>> GetLowStockProductsAsync(int threshold, CancellationToken cancellationToken = default)
+        {
+            return await _dbContext.Products
+                .Where(p => p.StockQuantity <= threshold && p.StockQuantity > 0 && !p.IsDeleted && p.IsApproved)
+                .Include(p => p.Brand)
+                .Include(p => p.Category)
+                .ToListAsync(cancellationToken);
+        }
+
+        public async Task<bool> ExistsAsync(int id, CancellationToken cancellationToken = default)
+        {
+            return await _dbContext.Products.AnyAsync(p => p.Id == id && !p.IsDeleted && p.IsApproved, cancellationToken);
+        }
+
+        public async Task<bool> ExistsBySkuAsync(string sku, CancellationToken cancellationToken = default)
+        {
+            return await _dbContext.Products.AnyAsync(p => p.Sku == sku && !p.IsDeleted && p.IsApproved, cancellationToken);
+        }
+
+        public async Task<bool> ExistsBySlugAsync(Slug slug, CancellationToken cancellationToken = default)
+        {
+            return await _dbContext.Products.AnyAsync(p => p.Slug == slug && !p.IsDeleted && p.IsApproved, cancellationToken);
+        }
+
+        public async Task<int> CountAsync(CancellationToken cancellationToken = default)
+        {
+            return await _dbContext.Products.CountAsync(p => !p.IsDeleted && p.IsApproved, cancellationToken);
+        }
+
+        public async Task<int> CountByCategoryAsync(int categoryId, CancellationToken cancellationToken = default)
+        {
+            return await _dbContext.Products.CountAsync(p => p.CategoryId == categoryId && !p.IsDeleted && p.IsApproved, cancellationToken);
+        }
+
+        public async Task<int> CountByBrandAsync(int brandId, CancellationToken cancellationToken = default)
+        {
+            return await _dbContext.Products.CountAsync(p => p.BrandId == brandId && !p.IsDeleted && p.IsApproved, cancellationToken);
+        }
+
+        public async Task UpdateStockQuantityAsync(int productId, int quantity, CancellationToken cancellationToken = default)
+        {
+            var product = await _dbContext.Products.FindAsync(new object[] { productId }, cancellationToken);
+            if (product != null && !product.IsDeleted)
+            {
+                product.UpdateStock(quantity);
+                _dbContext.Products.Update(product);
+                await _dbContext.SaveChangesAsync(cancellationToken);
+            }
+        }
+
+
+        public async Task UpdateStockStatusAsync(int productId, StockStatus status, CancellationToken cancellationToken = default)
+        {
+            var product = await _dbContext.Products.FindAsync(new object[] { productId }, cancellationToken);
+            if (product != null && !product.IsDeleted)
+            {
+                product.SetStockStatus(status);
+                _dbContext.Products.Update(product);
+            }
+        }
+
+        public async Task AddVariantAsync(ProductVariant variant, CancellationToken cancellationToken = default)
+        {
+            await _dbContext.ProductVariants.AddAsync(variant, cancellationToken);
+        }
+
+        public async Task RemoveVariantAsync(ProductVariant variant, CancellationToken cancellationToken = default)
+        {
+            // Soft Delete
+            var entry = _dbContext.Entry(variant);
+            if (entry.State == EntityState.Detached)
+            {
+                _dbContext.ProductVariants.Attach(variant);
+            }
+
+            var isDeletedProperty = variant.GetType().GetProperty("IsDeleted");
+            if (isDeletedProperty != null && isDeletedProperty.CanWrite)
+            {
+                isDeletedProperty.SetValue(variant, true);
+            }
+
+            _dbContext.ProductVariants.Update(variant);
+        }
+
+        public async Task AddImageAsync(ImageResource image, CancellationToken cancellationToken = default)
+        {
+            await _dbContext.ImageResources.AddAsync(image, cancellationToken);
+        }
+
+        public async Task RemoveImageAsync(ImageResource image, CancellationToken cancellationToken = default)
+        {
+            // Soft Delete
+            var entry = _dbContext.Entry(image);
+            if (entry.State == EntityState.Detached)
+            {
+                _dbContext.ImageResources.Attach(image);
+            }
+
+            var isDeletedProperty = image.GetType().GetProperty("IsDeleted");
+            if (isDeletedProperty != null && isDeletedProperty.CanWrite)
+            {
+                isDeletedProperty.SetValue(image, true);
+            }
+
+            _dbContext.ImageResources.Update(image);
+        }
+
+        public async Task AddAttributeAsync(ProductAttribute attribute, CancellationToken cancellationToken = default)
+        {
+            await _dbContext.ProductAttributes.AddAsync(attribute, cancellationToken);
+        }
+
+        public async Task RemoveAttributeAsync(ProductAttribute attribute, CancellationToken cancellationToken = default)
+        {
+            // Soft Delete
+            var entry = _dbContext.Entry(attribute);
+            if (entry.State == EntityState.Detached)
+            {
+                _dbContext.ProductAttributes.Attach(attribute);
+            }
+
+            var isDeletedProperty = attribute.GetType().GetProperty("IsDeleted");
+            if (isDeletedProperty != null && isDeletedProperty.CanWrite)
+            {
+                isDeletedProperty.SetValue(attribute, true);
+            }
+
+            _dbContext.ProductAttributes.Update(attribute);
+        }
+
+        public async Task AddTagAsync(ProductTag tag, CancellationToken cancellationToken = default)
+        {
+            await _dbContext.ProductTags.AddAsync(tag, cancellationToken);
+        }
+
+        public async Task RemoveTagAsync(ProductTag tag, CancellationToken cancellationToken = default)
+        {
+            // Soft Delete
+            var entry = _dbContext.Entry(tag);
+            if (entry.State == EntityState.Detached)
+            {
+                _dbContext.ProductTags.Attach(tag);
+            }
+
+            var isDeletedProperty = tag.GetType().GetProperty("IsDeleted");
+            if (isDeletedProperty != null && isDeletedProperty.CanWrite)
+            {
+                isDeletedProperty.SetValue(tag, true);
+            }
+
+            _dbContext.ProductTags.Update(tag);
+        }
+
+        public async Task AddReviewAsync(ProductReview review, CancellationToken cancellationToken = default)
+        {
+            await _dbContext.ProductReviews.AddAsync(review, cancellationToken);
+        }
+
+        public async Task RemoveReviewAsync(ProductReview review, CancellationToken cancellationToken = default)
+        {
+            // Soft Delete
+            var entry = _dbContext.Entry(review);
+            if (entry.State == EntityState.Detached)
+            {
+                _dbContext.ProductReviews.Attach(review);
+            }
+
+            var isDeletedProperty = review.GetType().GetProperty("IsDeleted");
+            if (isDeletedProperty != null && isDeletedProperty.CanWrite)
+            {
+                isDeletedProperty.SetValue(review, true);
+            }
+
+            _dbContext.ProductReviews.Update(review);
+        }
+
+        public async Task<decimal> GetAveragePriceByCategoryAsync(int categoryId, CancellationToken cancellationToken = default)
+        {
+            return await _dbContext.Products
+                .Where(p => p.CategoryId == categoryId && p.Status == ProductStatus.Published && !p.IsDeleted && p.IsApproved)
+                .AverageAsync(p => p.Price.Amount, cancellationToken);
+        }
+
+        public async Task<decimal> GetAveragePriceByBrandAsync(int brandId, CancellationToken cancellationToken = default)
+        {
+            return await _dbContext.Products
+                .Where(p => p.BrandId == brandId && p.Status == ProductStatus.Published && !p.IsDeleted && p.IsApproved)
+                .AverageAsync(p => p.Price.Amount, cancellationToken);
+        }
+
+        public async Task<int> GetViewCountAsync(int productId, CancellationToken cancellationToken = default)
+        {
+            var product = await _dbContext.Products.FindAsync(new object[] { productId }, cancellationToken);
+            return (product != null && !product.IsDeleted) ? product.ViewCount : 0;
+        }
+
+        public async Task IncrementViewCountAsync(int productId, CancellationToken cancellationToken = default)
+        {
+            var product = await _dbContext.Products.FindAsync(new object[] { productId }, cancellationToken);
+            if (product != null && !product.IsDeleted)
+            {
+                product.IncrementViewCount();
+                _dbContext.Products.Update(product);
+            }
+        }
+
+        public async Task<double> GetAverageRatingAsync(int productId, CancellationToken cancellationToken = default)
+        {
+            var approvedReviews = await _dbContext.ProductReviews
+                .Where(r => r.ProductId == productId && r.Status == ReviewStatus.Approved && !r.IsDeleted)
+                .Select(r => r.Rating)
+                .ToListAsync(cancellationToken);
+
+            if (!approvedReviews.Any())
+                return 0.0;
+
+            return approvedReviews.Average();
+        }
+
+        public async Task<int> GetTotalReviewsCountAsync(int productId, CancellationToken cancellationToken = default)
+        {
+            return await _dbContext.ProductReviews
+                .Where(r => r.ProductId == productId && r.Status == ReviewStatus.Approved && !r.IsDeleted)
+                .CountAsync(cancellationToken);
+        }
+
+        public async Task<IDictionary<int, int>> GetRatingDistributionAsync(int productId, CancellationToken cancellationToken = default)
+        {
+            var distribution = await _dbContext.ProductReviews
+                .Where(r => r.ProductId == productId && r.Status == ReviewStatus.Approved && !r.IsDeleted)
+                .GroupBy(r => r.Rating)
+                .Select(g => new { Rating = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.Rating, x => x.Count, cancellationToken);
+
+            for (int i = 1; i <= 5; i++)
+            {
+                if (!distribution.ContainsKey(i))
+                {
+                    distribution[i] = 0;
+                }
+            }
+
+            return distribution;
+        }
+    }
+}
