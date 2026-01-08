@@ -6,11 +6,13 @@ using Catalog_Service.src._02_Infrastructure.Configuration;
 using Catalog_Service.src._02_Infrastructure.Data.Converters;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.Extensions.Logging; // این using را اضافه کنید
+using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection.Emit;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -20,6 +22,9 @@ namespace Catalog_Service.src._02_Infrastructure.Data.Db
     {
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
         {
+            // برای مشاهده SQL در Output Window ویژوال استودیو
+            // این خط را در صورت نیاز می‌توانید موقتاً فعال کنید:
+            // this.Database.LogTo(Console.WriteLine, LogLevel.Information);
         }
 
         // DbSet برای موجودیت‌های اصلی
@@ -36,6 +41,12 @@ namespace Catalog_Service.src._02_Infrastructure.Data.Db
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+
+            // --- تنظیم لاگر برای دیباگ SQL (اختیاری) ---
+            // با این تنظیم می‌توانید کوئری‌های SQL تولید شده را در Output ببینید
+            var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+            // ---------------------------------------------------
+
             var moneyConverter = new MoneyConverter();
 
             foreach (var entityType in modelBuilder.Model.GetEntityTypes())
@@ -88,17 +99,7 @@ namespace Catalog_Service.src._02_Infrastructure.Data.Db
                 .HasColumnType("decimal(18,2)");
 
             // تنظیمات برای Value Object: Slug
-            modelBuilder.Entity<Product>()
-                .Property(p => p.Slug)
-                .HasMaxLength(200);
-
-            modelBuilder.Entity<Category>()
-                .Property(c => c.Slug)
-                .HasMaxLength(200);
-
-            modelBuilder.Entity<Brand>()
-                .Property(b => b.Slug)
-                .HasMaxLength(200);
+            // حذف کدهای تکراری و افزودن تنظیمات صحیح
             modelBuilder.Entity<Product>()
                 .Property(p => p.Slug)
                 .HasMaxLength(200);
@@ -204,7 +205,7 @@ namespace Catalog_Service.src._02_Infrastructure.Data.Db
                 .HasIndex(p => p.CategoryId)
                 .HasDatabaseName("IX_Product_CategoryId");
 
-            // ایندکس برای بهینه‌سازی جستجو بر اساس برند
+            // ایندکس برای بهîne‌سازی جستجو بر اساس برند
             modelBuilder.Entity<Product>()
                 .HasIndex(p => p.BrandId)
                 .HasDatabaseName("IX_Product_BrandId");
@@ -311,6 +312,10 @@ namespace Catalog_Service.src._02_Infrastructure.Data.Db
             var domainEntities = ChangeTracker.Entries<AggregateRoot>()
                 .Where(x => x.Entity.DomainEvents != null && x.Entity.DomainEvents.Any())
                 .ToList();
+
+            // بررسی اینکه اگر هیچ موجودیتی با رویداد وجود نداشت، متد ادامه یابد
+            if (domainEntities == null || !domainEntities.Any())
+                return;
 
             var domainEvents = domainEntities
                 .SelectMany(x => x.Entity.DomainEvents)

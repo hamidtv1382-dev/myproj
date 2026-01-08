@@ -4,10 +4,8 @@ using Catalog_Service.src._01_Domain.Core.Enums;
 using Catalog_Service.src._01_Domain.Core.Primitives;
 using Catalog_Service.src._02_Infrastructure.Data.Db;
 using Catalog_Service.src.CrossCutting.Exceptions;
-using Dapper;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
-using System.Data;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
@@ -224,112 +222,32 @@ namespace Catalog_Service.src._02_Infrastructure.Data.Repositories
                 .ToListAsync(cancellationToken);
         }
 
-        // --- متد اصلی با استفاده از Dapper ---
         public async Task<(IEnumerable<Product> Products, int TotalCount)> GetPagedAsync(
-            int pageNumber,
-            int pageSize,
-            string searchTerm = null,
-            int? categoryId = null,
-            int? brandId = null,
-            ProductStatus? status = null,
-            decimal? minPrice = null,
-            decimal? maxPrice = null,
-            string sortBy = null,
-            bool sortAscending = true,
-            CancellationToken cancellationToken = default)
+     int pageNumber,
+     int pageSize,
+     string searchTerm = null,
+     int? categoryId = null,
+     int? brandId = null,
+     ProductStatus? status = null,
+     decimal? minPrice = null,
+     decimal? maxPrice = null,
+     string sortBy = null,
+     bool sortAscending = true,
+     CancellationToken cancellationToken = default)
         {
-            // 1. تعریف کوئری خام SQL (همان چیزی که خواستید)
-            const string sql = @"
-                SELECT 
-                    p.*, 
-                    c.*,
-                    b.*
-                FROM Products AS p
-                LEFT JOIN Categories AS c ON p.CategoryId = c.Id
-                LEFT JOIN Brands AS b ON p.BrandId = b.Id
-                WHERE p.IsDeleted = 0 AND p.IsApproved = 1";
+            // 1. استفاده از کوئری LINQ عادی EF Core (بهترین و پایدارترین روش)
+            // این کوئری دقیقا معادل SELECT * FROM Products WHERE ... است
+            var query = _dbContext.Products
+                .Where(p => !p.IsDeleted && p.IsApproved) // فیلتر اصلی شما
+                .Include(p => p.Brand)
+                .Include(p => p.Category)
+                .Include(p => p.Reviews) // برای محاسبه امتیاز
+                .AsQueryable();
 
-            // 2. دریافت کانکشن Dapper
-            // فرض بر این است که شما یک سازنده یا روشی برای دسترسی به DbConnection دارید.
-            // اگر این خط را ندارید، باید IDbConnection را در Repository تزریق کنید.
-            using var connection = _dbContext.Database.GetDbConnection();
-
-            if (connection.State != ConnectionState.Open)
-                await connection.OpenAsync(cancellationToken);
-
-            // 3. اجرای کوئری با Dapper و Map کردن دستی به آبجکت‌ها
-            // Dapper دو تا جوین (Category و Brand) را به Product اضافه می‌کند
-            var productDict = new Dictionary<int, Product>();
-
-            await connection.QueryAsync<Product, Category, Brand, Product>(
-                sql,
-                (product, category, brand) =>
-                {
-                    // مدیریت تکراری بودن ردیف‌های جوین
-                    if (!productDict.TryGetValue(product.Id, out var existingProduct))
-                    {
-                        productDict.Add(product.Id, product);
-                        existingProduct = product;
-                    }
-
-                    // تنظیم دستی Navigation Properties (چون Dapper این کار را انجام نمی‌دهد)
-                    // از Reflection استفاده می‌کنیم چون Setterها private هستند
-                    if (category != null)
-                        SetPrivateProperty(existingProduct, "Category", category);
-
-                    if (brand != null)
-                        SetPrivateProperty(existingProduct, "Brand", brand);
-
-                    return existingProduct;
-                },
-                splitOn: "Id" // Dapper هر بار که ستون Id ببیند جدول جدید را شروع می‌کند
-            );
-
-            var rawProducts = productDict.Values.ToList();
-
-            // 4. اعمال فیلترها و مرتب‌سازی در حافظه (روی خروجی Dapper)
-            return ApplyInMemoryLogic(rawProducts, pageNumber, pageSize, searchTerm, categoryId, brandId, status, minPrice, maxPrice, sortBy, sortAscending);
-        }
-
-        // --- متد کمکی: پر کردن پراپرتی‌های Private ---
-        private void SetPrivateProperty(object obj, string propertyName, object value)
-        {
-            if (obj == null || value == null) return;
-
-            var prop = obj.GetType().GetProperty(propertyName, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
-            if (prop != null && prop.CanWrite)
-            {
-                prop.SetValue(obj, value, null);
-            }
-            else
-            {
-                // اگر پراپرتی set خصوصی بود، از فیلد پشتیبان استفاده می‌کنیم
-                var field = obj.GetType().GetField($"<{propertyName}>k__BackingField", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                field?.SetValue(obj, value);
-            }
-        }
-
-        // --- متد کمکی: پردازش در حافظه ---
-        private (IEnumerable<Product> Products, int TotalCount) ApplyInMemoryLogic(
-            List<Product> products,
-            int pageNumber,
-            int pageSize,
-            string searchTerm,
-            int? categoryId,
-            int? brandId,
-            ProductStatus? status,
-            decimal? minPrice,
-            decimal? maxPrice,
-            string sortBy,
-            bool sortAscending)
-        {
-            IEnumerable<Product> query = products;
-
-            // --- فیلترها (چون روی لیست در حافظه است، هر نوع شرطی را قبول می‌کند) ---
-
+            // 2. اعمال سایر فیلترها (SQL)
             if (!string.IsNullOrWhiteSpace(searchTerm))
             {
-                query = query.Where(p => p.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) || p.Description.Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
+                query = query.Where(p => p.Name.Contains(searchTerm) || p.Description.Contains(searchTerm));
             }
 
             if (categoryId.HasValue)
@@ -347,44 +265,48 @@ namespace Catalog_Service.src._02_Infrastructure.Data.Repositories
                 query = query.Where(p => p.Status == status.Value);
             }
 
-            // فیلتر موجودی (اگر Published بود)
             if (status.HasValue && status.Value == ProductStatus.Published)
             {
                 query = query.Where(p => p.StockQuantity > 0);
             }
 
-            // فیلتر قیمت
+            // 3. انتقال به حافظه برای فیلتر قیمت (حل مشکل Translation)
+            // چون Price.Amount و Money Value Object هستند، اینجا لیست را می‌خوانیم
+            var filteredProducts = await query.ToListAsync(cancellationToken);
+
+            IEnumerable<Product> finalQuery = filteredProducts;
+
+            // 4. فیلتر قیمت در حافظه
             if (minPrice.HasValue)
             {
-                query = query.Where(p => p.Price.Amount >= minPrice.Value);
+                finalQuery = finalQuery.Where(p => p.Price.Amount >= minPrice.Value);
             }
 
             if (maxPrice.HasValue)
             {
-                query = query.Where(p => p.Price.Amount <= maxPrice.Value);
+                finalQuery = finalQuery.Where(p => p.Price.Amount <= maxPrice.Value);
             }
 
-            // --- مرتب‌سازی ---
-            query = sortBy switch
+            // 5. مرتب‌سازی در حافظه
+            finalQuery = sortBy switch
             {
-                "name" => sortAscending ? query.OrderBy(p => p.Name) : query.OrderByDescending(p => p.Name),
-                "price" => sortAscending ? query.OrderBy(p => p.Price.Amount) : query.OrderByDescending(p => p.Price.Amount),
-                "date" => sortAscending ? query.OrderBy(p => p.CreatedAt) : query.OrderByDescending(p => p.CreatedAt),
+                "name" => sortAscending ? finalQuery.OrderBy(p => p.Name) : finalQuery.OrderByDescending(p => p.Name),
+                "price" => sortAscending ? finalQuery.OrderBy(p => p.Price.Amount) : finalQuery.OrderByDescending(p => p.Price.Amount),
+                "date" => sortAscending ? finalQuery.OrderBy(p => p.CreatedAt) : finalQuery.OrderByDescending(p => p.CreatedAt),
                 "rating" => sortAscending ?
-                    query.OrderBy(p => p.Reviews.Any() ? p.Reviews.Average(r => r.Rating) : 0) :
-                    query.OrderByDescending(p => p.Reviews.Any() ? p.Reviews.Average(r => r.Rating) : 0),
-                _ => query.OrderByDescending(p => p.CreatedAt)
+                    finalQuery.OrderBy(p => p.Reviews.Any() ? p.Reviews.Average(r => r.Rating) : 0) :
+                    finalQuery.OrderByDescending(p => p.Reviews.Any() ? p.Reviews.Average(r => r.Rating) : 0),
+                _ => finalQuery.OrderByDescending(p => p.CreatedAt)
             };
 
-            var totalCount = query.Count();
+            var totalCount = finalQuery.Count();
 
-            // --- صفحه بندی ---
-            var pagedProducts = query
+            var products = finalQuery
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
                 .ToList();
 
-            return (pagedProducts, totalCount);
+            return (products, totalCount);
         }
 
         public async Task<IEnumerable<Product>> GetByStatusAsync(ProductStatus status, CancellationToken cancellationToken = default)
