@@ -5,28 +5,49 @@ namespace Order_Service.src._01_Domain.Core.Entities
 {
     public class OrderItem : BaseEntity
     {
+        public Guid Id { get; private set; }
+        public Guid OrderId { get; private set; }
         public Guid ProductId { get; private set; }
         public string ProductName { get; private set; }
-        public int Quantity { get; private set; }
+        public string? ImageUrl { get; private set; }
         public Money UnitPrice { get; private set; }
+        public int Quantity { get; private set; }
         public Money TotalPrice => UnitPrice * Quantity;
 
-        // Parameterless constructor for EF Core
-        private OrderItem() : base() { }
+        protected OrderItem() { }
 
-        public OrderItem(Guid id, Guid productId, string productName, int quantity, Money unitPrice) : base(id)
+        public OrderItem(Guid id, Guid orderId, Guid productId, string productName, string? imageUrl, Money unitPrice, int quantity)
         {
-            if (string.IsNullOrWhiteSpace(productName))
-                throw new ArgumentException("Product name cannot be empty.", nameof(productName));
-            if (quantity <= 0)
-                throw new ArgumentException("Quantity must be greater than zero.", nameof(quantity));
-            if (unitPrice == null)
-                throw new ArgumentNullException(nameof(unitPrice));
-
+            Id = id;
+            OrderId = orderId;
             ProductId = productId;
             ProductName = productName;
-            Quantity = quantity;
+            ImageUrl = imageUrl;
             UnitPrice = unitPrice;
+            SetQuantity(quantity);
+        }
+
+        public void UpdateQuantity(int quantity)
+        {
+            if (quantity <= 0)
+                throw new ArgumentException("Quantity must be greater than zero.");
+
+            Quantity = quantity;
+            UpdateTimestamp();
+        }
+
+        public void ChangePrice(Money newUnitPrice)
+        {
+            UnitPrice = newUnitPrice;
+            UpdateTimestamp();
+        }
+
+        private void SetQuantity(int quantity)
+        {
+            if (quantity <= 0)
+                throw new ArgumentException("Quantity must be greater than zero.");
+
+            Quantity = quantity;
         }
     }
 }

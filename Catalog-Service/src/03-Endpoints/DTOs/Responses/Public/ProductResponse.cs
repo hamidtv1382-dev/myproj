@@ -9,6 +9,7 @@ namespace Catalog_Service.src._03_Endpoints.DTOs.Responses.Public
         public string Name { get; set; }
         public string Description { get; set; }
         public decimal Price { get; set; }
+        public int ViewCount { get; private set; }
         public decimal? OriginalPrice { get; set; }
         public string Sku { get; set; }
         public string Slug { get; set; }

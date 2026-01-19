@@ -223,60 +223,52 @@ namespace Catalog_Service.src._02_Infrastructure.Data.Repositories
         }
 
         public async Task<(IEnumerable<Product> Products, int TotalCount)> GetPagedAsync(
-     int pageNumber,
-     int pageSize,
-     string searchTerm = null,
-     int? categoryId = null,
-     int? brandId = null,
-     ProductStatus? status = null,
-     decimal? minPrice = null,
-     decimal? maxPrice = null,
-     string sortBy = null,
-     bool sortAscending = true,
-     CancellationToken cancellationToken = default)
+       int pageNumber,
+       int pageSize,
+       string searchTerm = null,
+       int? categoryId = null,
+       int? brandId = null,
+       ProductStatus? status = null,
+       decimal? minPrice = null,
+       decimal? maxPrice = null,
+       string sortBy = null,
+       bool sortAscending = true,
+       CancellationToken cancellationToken = default)
         {
-            // 1. استفاده از کوئری LINQ عادی EF Core (بهترین و پایدارترین روش)
-            // این کوئری دقیقا معادل SELECT * FROM Products WHERE ... است
-            var query = _dbContext.Products
-                .Where(p => !p.IsDeleted && p.IsApproved) // فیلتر اصلی شما
+            // مرحله ۱: ساخت کوئری پایه با فیلترهای قابل ترجمه برای دیتابیس
+            var dbQuery = _dbContext.Products
+                .Where(p => !p.IsDeleted && p.IsApproved)
                 .Include(p => p.Brand)
                 .Include(p => p.Category)
-                .Include(p => p.Reviews) // برای محاسبه امتیاز
+                .Include(p => p.Reviews)
                 .AsQueryable();
 
-            // 2. اعمال سایر فیلترها (SQL)
             if (!string.IsNullOrWhiteSpace(searchTerm))
             {
-                query = query.Where(p => p.Name.Contains(searchTerm) || p.Description.Contains(searchTerm));
+                dbQuery = dbQuery.Where(p => p.Name.Contains(searchTerm) || p.Description.Contains(searchTerm));
             }
 
             if (categoryId.HasValue)
             {
-                query = query.Where(p => p.CategoryId == categoryId.Value);
+                dbQuery = dbQuery.Where(p => p.CategoryId == categoryId.Value);
             }
 
             if (brandId.HasValue)
             {
-                query = query.Where(p => p.BrandId == brandId.Value);
+                dbQuery = dbQuery.Where(p => p.BrandId == brandId.Value);
             }
 
             if (status.HasValue)
             {
-                query = query.Where(p => p.Status == status.Value);
+                dbQuery = dbQuery.Where(p => p.Status == status.Value);
             }
 
-            if (status.HasValue && status.Value == ProductStatus.Published)
-            {
-                query = query.Where(p => p.StockQuantity > 0);
-            }
+            // مرحله ۲: خواندن نتایج فیلتر شده از دیتابیس به حافظه
+            var filteredProductsFromDb = await dbQuery.ToListAsync(cancellationToken);
 
-            // 3. انتقال به حافظه برای فیلتر قیمت (حل مشکل Translation)
-            // چون Price.Amount و Money Value Object هستند، اینجا لیست را می‌خوانیم
-            var filteredProducts = await query.ToListAsync(cancellationToken);
+            // مرحله ۳: اعمال فیلتر قیمت و مرتب‌سازی در حافظه
+            IEnumerable<Product> finalQuery = filteredProductsFromDb;
 
-            IEnumerable<Product> finalQuery = filteredProducts;
-
-            // 4. فیلتر قیمت در حافظه
             if (minPrice.HasValue)
             {
                 finalQuery = finalQuery.Where(p => p.Price.Amount >= minPrice.Value);
@@ -287,7 +279,7 @@ namespace Catalog_Service.src._02_Infrastructure.Data.Repositories
                 finalQuery = finalQuery.Where(p => p.Price.Amount <= maxPrice.Value);
             }
 
-            // 5. مرتب‌سازی در حافظه
+            // حالا مرتب‌سازی را در حافظه انجام دهید
             finalQuery = sortBy switch
             {
                 "name" => sortAscending ? finalQuery.OrderBy(p => p.Name) : finalQuery.OrderByDescending(p => p.Name),
@@ -300,14 +292,13 @@ namespace Catalog_Service.src._02_Infrastructure.Data.Repositories
             };
 
             var totalCount = finalQuery.Count();
-
             var products = finalQuery
                 .Skip((pageNumber - 1) * pageSize)
-                .Take(pageSize)
-                .ToList();
+                .Take(pageSize);
 
             return (products, totalCount);
         }
+
 
         public async Task<IEnumerable<Product>> GetByStatusAsync(ProductStatus status, CancellationToken cancellationToken = default)
         {

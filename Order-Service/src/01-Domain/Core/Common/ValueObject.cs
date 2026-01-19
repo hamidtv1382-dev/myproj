@@ -1,45 +1,37 @@
 ﻿namespace Order_Service.src._01_Domain.Core.Common
 {
-    public abstract class ValueObject : IEquatable<ValueObject>
+    public abstract class ValueObject
     {
-        public abstract bool Equals(ValueObject other);
+        protected abstract IEnumerable<object> GetEqualityComponents();
 
         public override bool Equals(object obj)
         {
-            return Equals(obj as ValueObject);
+            if (obj == null || obj.GetType() != this.GetType())
+                return false;
+
+            var other = (ValueObject)obj;
+
+            return this.GetEqualityComponents().SequenceEqual(other.GetEqualityComponents());
         }
 
         public override int GetHashCode()
         {
-            // GetEqualityComponents should be implemented by the derived class
             return GetEqualityComponents()
-                .Aggregate(1, (current, obj) =>
-                {
-                    unchecked
-                    {
-                        return current * 23 + (obj?.GetHashCode() ?? 0);
-                    }
-                });
+                .Select(x => x != null ? x.GetHashCode() : 0)
+                .Aggregate((x, y) => x ^ y);
         }
 
         protected static bool EqualOperator(ValueObject left, ValueObject right)
         {
-            if (left is null ^ right is null)
-            {
+            if (ReferenceEquals(left, null) ^ ReferenceEquals(right, null))
                 return false;
-            }
-            return left?.Equals(right) != false;
+
+            return ReferenceEquals(left, null) || left.Equals(right);
         }
 
         protected static bool NotEqualOperator(ValueObject left, ValueObject right)
         {
-            return !EqualOperator(left, right);
+            return !(EqualOperator(left, right));
         }
-
-        /// <summary>
-        /// Gets the components of the value object that are used for equality.
-        /// </summary>
-        /// <returns>An enumerable of the components.</returns>
-        protected abstract IEnumerable<object> GetEqualityComponents();
     }
 }

@@ -1,60 +1,54 @@
-﻿namespace Order_Service.src._01_Domain.Core.Common
+﻿using Order_Service.src._01_Domain.Core.Events;
+
+namespace Order_Service.src._01_Domain.Core.Common
 {
-    public abstract class BaseEntity : IEquatable<BaseEntity>
+    public abstract class BaseEntity
     {
-        public Guid Id { get; protected set; }
         public DateTime CreatedAt { get; protected set; }
-        public DateTime? ModifiedAt { get; protected set; }
+        public DateTime? UpdatedAt { get; protected set; }
+        public bool IsDeleted { get; protected set; }
 
-        protected BaseEntity(Guid id)
-        {
-            if (id == Guid.Empty)
-            {
-                throw new ArgumentException("ID cannot be empty.", nameof(id));
-            }
-            Id = id;
-            CreatedAt = DateTime.UtcNow;
-        }
+        private readonly List<IDomainEvent> _domainEvents = new();
+        public IReadOnlyCollection<IDomainEvent> DomainEvents => _domainEvents.AsReadOnly();
 
-        // Parameterless constructor for EF Core
         protected BaseEntity()
         {
-            Id = Guid.NewGuid();
             CreatedAt = DateTime.UtcNow;
+            IsDeleted = false;
+        }
+
+        public void AddDomainEvent(IDomainEvent domainEvent)
+        {
+            _domainEvents.Add(domainEvent);
+        }
+
+        public void RemoveDomainEvent(IDomainEvent domainEvent)
+        {
+            _domainEvents.Remove(domainEvent);
+        }
+
+        public void ClearDomainEvents()
+        {
+            _domainEvents.Clear();
         }
 
         public void UpdateTimestamp()
         {
-            ModifiedAt = DateTime.UtcNow;
+            UpdatedAt = DateTime.UtcNow;
         }
 
-        public override bool Equals(object obj)
+        public void MarkAsDeleted()
         {
-            return Equals(obj as BaseEntity);
+            if (IsDeleted) return;
+            IsDeleted = true;
+            UpdatedAt = DateTime.UtcNow;
         }
 
-        public bool Equals(BaseEntity other)
+        public void Restore()
         {
-            return other is not null && Id.Equals(other.Id);
-        }
-
-        public override int GetHashCode()
-        {
-            return Id.GetHashCode();
-        }
-
-        public static bool operator ==(BaseEntity left, BaseEntity right)
-        {
-            if (left is null)
-            {
-                return right is null;
-            }
-            return left.Equals(right);
-        }
-
-        public static bool operator !=(BaseEntity left, BaseEntity right)
-        {
-            return !(left == right);
+            if (!IsDeleted) return;
+            IsDeleted = false;
+            UpdatedAt = DateTime.UtcNow;
         }
     }
 }

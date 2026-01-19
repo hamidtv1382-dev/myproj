@@ -1,29 +1,35 @@
 ﻿using Order_Service.src._01_Domain.Core.Common;
+using Order_Service.src._01_Domain.Core.ValueObjects;
 
 namespace Order_Service.src._01_Domain.Core.Entities
 {
     public class Basket : BaseEntity
     {
-        public string UserId { get; private set; }
-
-        private readonly List<BasketItem> _items = new();
+        public Guid Id { get; private set; }
+        public Guid BuyerId { get; private set; }
+        private readonly List<BasketItem> _items;
         public IReadOnlyCollection<BasketItem> Items => _items.AsReadOnly();
+        public Guid? DiscountId { get; private set; }
+        public Money TotalAmount { get; private set; }
+        public DateTime? ExpiresAt { get; private set; }
 
-        // Parameterless constructor for EF Core
-        private Basket() : base() { }
-
-        public Basket(Guid id, string userId) : base(id)
+        protected Basket()
         {
-            UserId = userId ?? throw new ArgumentNullException(nameof(userId));
+            _items = new List<BasketItem>();
+            TotalAmount = Money.Zero();
+        }
+
+        public Basket(Guid id, Guid buyerId, TimeSpan expiration)
+        {
+            Id = id;
+            BuyerId = buyerId;
+            _items = new List<BasketItem>();
+            TotalAmount = Money.Zero();
+            ExpiresAt = DateTime.UtcNow.Add(expiration);
         }
 
         public void AddItem(BasketItem item)
         {
-            if (item is null)
-            {
-                throw new ArgumentNullException(nameof(item));
-            }
-
             var existingItem = _items.FirstOrDefault(i => i.ProductId == item.ProductId);
             if (existingItem != null)
             {
@@ -33,6 +39,7 @@ namespace Order_Service.src._01_Domain.Core.Entities
             {
                 _items.Add(item);
             }
+            CalculateTotal();
             UpdateTimestamp();
         }
 
@@ -42,6 +49,24 @@ namespace Order_Service.src._01_Domain.Core.Entities
             if (item != null)
             {
                 _items.Remove(item);
+                CalculateTotal();
+                UpdateTimestamp();
+            }
+        }
+
+        public void UpdateItemQuantity(Guid productId, int quantity)
+        {
+            if (quantity <= 0)
+            {
+                RemoveItem(productId);
+                return;
+            }
+
+            var item = _items.FirstOrDefault(i => i.ProductId == productId);
+            if (item != null)
+            {
+                item.UpdateQuantity(quantity);
+                CalculateTotal();
                 UpdateTimestamp();
             }
         }
@@ -49,7 +74,31 @@ namespace Order_Service.src._01_Domain.Core.Entities
         public void Clear()
         {
             _items.Clear();
+            DiscountId = null;
+            CalculateTotal();
             UpdateTimestamp();
+        }
+
+        public void ApplyDiscount(Guid discountId)
+        {
+            DiscountId = discountId;
+            UpdateTimestamp();
+        }
+
+        public void RemoveDiscount()
+        {
+            DiscountId = null;
+            UpdateTimestamp();
+        }
+
+        private void CalculateTotal()
+        {
+            TotalAmount = _items.Any() ? new Money(_items.Sum(i => i.TotalPrice.Value), "IRR") : Money.Zero();
+        }
+
+        public bool IsExpired()
+        {
+            return ExpiresAt.HasValue && DateTime.UtcNow > ExpiresAt.Value;
         }
     }
 }

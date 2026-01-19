@@ -231,23 +231,9 @@ namespace Catalog_Service.src._01_Domain.Services
         }
 
         // تغییر نوع پارامتر به string?
-        public async Task<(IEnumerable<Product> Products, int TotalCount)> GetPagedAsync(int pageNumber, int pageSize, string searchTerm = null, int? categoryId = null, int? brandId = null, ProductStatus? status = null, decimal? minPrice = null, decimal? maxPrice = null, string sortBy = null, bool sortAscending = true, string? vendorUserId = null, CancellationToken cancellationToken = default)
+        public async Task<(IEnumerable<Product> Products, int TotalCount)> GetPagedAsync(int pageNumber, int pageSize, string searchTerm = null, int? categoryId = null, int? brandId = null, ProductStatus? status = null, decimal? minPrice = null, decimal? maxPrice = null, string sortBy = null, bool sortAscending = true, CancellationToken cancellationToken = default)
         {
-            var result = await _productRepository.GetPagedAsync(pageNumber, pageSize, searchTerm, categoryId, brandId, status, minPrice, maxPrice, sortBy, sortAscending, cancellationToken);
-
-            if (!string.IsNullOrEmpty(vendorUserId))
-            {
-                var filteredProducts = result.Products.Where(p => p.CreatedByUserId == vendorUserId).ToList();
-                var totalCount = filteredProducts.Count;
-
-                var pagedProducts = filteredProducts
-                    .Skip((pageNumber - 1) * pageSize)
-                    .Take(pageSize);
-
-                return (pagedProducts, totalCount);
-            }
-
-            return result;
+            return await _productRepository.GetPagedAsync(pageNumber, pageSize, searchTerm, categoryId, brandId, status, minPrice, maxPrice, sortBy, sortAscending, cancellationToken);
         }
 
         public async Task<IEnumerable<Product>> GetByCategoryAsync(int categoryId, CancellationToken cancellationToken = default)

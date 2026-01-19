@@ -55,7 +55,6 @@ namespace Catalog_Service.src._03_Endpoints.Controllers.Public
                 request.MaxPrice,
                 request.SortBy,
                 request.SortAscending,
-                null, // vendorUserId: ارسال null برای کاربران عمومی
                 cancellationToken);
 
             var products = result.Products;

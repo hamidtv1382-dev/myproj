@@ -1,7 +1,7 @@
 ﻿namespace Order_Service.src._01_Domain.Core.Events.Handlers
 {
-    public interface IDomainEventHandler<in TEvent> where TEvent : IDomainEvent
+    public interface IDomainEventHandler<T> where T : IDomainEvent
     {
-        Task HandleAsync(TEvent domainEvent, CancellationToken cancellationToken = default);
+        Task Handle(T domainEvent);
     }
 }

@@ -6,80 +6,128 @@ namespace Order_Service.src._01_Domain.Core.Entities
 {
     public class Order : BaseEntity
     {
-        public string UserId { get; private set; }
+        public Guid Id { get; private set; }
         public OrderNumber OrderNumber { get; private set; }
-        public OrderStatus Status { get; private set; }
-        public PaymentStatus PaymentStatus { get; private set; }
+        public Guid BuyerId { get; private set; }
         public ShippingAddress ShippingAddress { get; private set; }
-        public Money TotalPrice { get; private set; }
-
-        private readonly List<OrderItem> _items = new();
+        private readonly List<OrderItem> _items;
         public IReadOnlyCollection<OrderItem> Items => _items.AsReadOnly();
+        public Money TotalAmount { get; private set; }
+        public Money DiscountAmount { get; private set; }
+        public Money FinalAmount { get; private set; }
+        public OrderStatus Status { get; private set; }
+        public Guid? DiscountId { get; private set; }
+        public DateTime? OrderDate { get; private set; }
+        public string? Description { get; private set; }
 
-        // Parameterless constructor for EF Core
-        private Order() : base() { }
-
-        public Order(Guid id, string userId, OrderNumber orderNumber, ShippingAddress shippingAddress) : base(id)
+        protected Order()
         {
-            UserId = userId ?? throw new ArgumentNullException(nameof(userId));
-            OrderNumber = orderNumber ?? throw new ArgumentNullException(nameof(orderNumber));
-            ShippingAddress = shippingAddress ?? throw new ArgumentNullException(nameof(shippingAddress));
+            _items = new List<OrderItem>();
+        }
+
+        public Order(Guid id, Guid buyerId, OrderNumber orderNumber, ShippingAddress shippingAddress)
+        {
+            Id = id;
+            BuyerId = buyerId;
+            OrderNumber = orderNumber;
+            ShippingAddress = shippingAddress;
+            _items = new List<OrderItem>();
             Status = OrderStatus.Pending;
-            PaymentStatus = PaymentStatus.Pending;
-            TotalPrice = Money.Zero(); // Initial price
+            TotalAmount = Money.Zero();
+            DiscountAmount = Money.Zero();
+            FinalAmount = Money.Zero();
+            CreatedAt = DateTime.UtcNow;
         }
 
         public void AddItem(OrderItem item)
         {
-            if (item is null)
+            if (Status != OrderStatus.Pending)
+                throw new InvalidOperationException("Cannot add items to an order that is not in Pending status.");
+
+            var existingItem = _items.FirstOrDefault(i => i.ProductId == item.ProductId);
+            if (existingItem != null)
             {
-                throw new ArgumentNullException(nameof(item));
+                existingItem.UpdateQuantity(existingItem.Quantity + item.Quantity);
             }
+            else
+            {
+                _items.Add(item);
+            }
+            RecalculateTotals();
+        }
+
+        public void RemoveItem(Guid itemId)
+        {
+            if (Status != OrderStatus.Pending)
+                throw new InvalidOperationException("Cannot remove items from an order that is not in Pending status.");
+
+            var item = _items.FirstOrDefault(i => i.Id == itemId);
+            if (item != null)
+            {
+                _items.Remove(item);
+                RecalculateTotals();
+            }
+        }
+
+        public void ApplyDiscount(Money discountAmount, Guid discountId)
+        {
+            if (Status != OrderStatus.Pending)
+                throw new InvalidOperationException("Cannot apply discount to an order that is not in Pending status.");
+
+            if (discountAmount.Value <= 0)
+                throw new ArgumentException("Discount amount must be greater than zero.");
+
+            DiscountId = discountId;
+            DiscountAmount = discountAmount;
+            RecalculateTotals();
+        }
+
+        public void Confirm()
+        {
+            if (_items.Count == 0)
+                throw new InvalidOperationException("Cannot confirm an order with no items.");
 
             if (Status != OrderStatus.Pending)
-            {
-                throw new InvalidOperationException("Cannot add items to an order that is not in 'Pending' status.");
-            }
+                throw new InvalidOperationException("Order is not in Pending status.");
 
-            _items.Add(item);
-            RecalculateTotalPrice();
+            Status = OrderStatus.Confirmed;
+            OrderDate = DateTime.UtcNow;
             UpdateTimestamp();
         }
 
-        public void MarkAsPaid()
+        public void Ship()
         {
-            if (Status != OrderStatus.Pending)
-            {
-                throw new InvalidOperationException("Only pending orders can be marked as paid.");
-            }
-            PaymentStatus = PaymentStatus.Succeeded;
-            UpdateTimestamp();
-        }
+            if (Status != OrderStatus.Confirmed)
+                throw new InvalidOperationException("Order is not in Confirmed status.");
 
-        public void MarkAsShipped()
-        {
-            if (PaymentStatus != PaymentStatus.Succeeded)
-            {
-                throw new InvalidOperationException("Cannot ship an order that has not been paid for.");
-            }
             Status = OrderStatus.Shipped;
             UpdateTimestamp();
         }
 
-        public void Cancel()
+        public void Deliver()
         {
-            if (Status == OrderStatus.Delivered || Status == OrderStatus.Shipped)
-            {
-                throw new InvalidOperationException("Cannot cancel a delivered or shipped order.");
-            }
-            Status = OrderStatus.Cancelled;
+            if (Status != OrderStatus.Shipped)
+                throw new InvalidOperationException("Order is not in Shipped status.");
+
+            Status = OrderStatus.Delivered;
             UpdateTimestamp();
         }
 
-        private void RecalculateTotalPrice()
+        public void Cancel(string reason = null)
         {
-            var totalAmount = _items.Sum(item => item.TotalPrice.Amount);
-            TotalPrice = Money.FromDecimal(totalAmount, _items.FirstOrDefault()?.UnitPrice.Currency ?? "USD");
+            if (Status == OrderStatus.Delivered || Status == OrderStatus.Cancelled || Status == OrderStatus.Refunded)
+                throw new InvalidOperationException("Cannot cancel this order.");
+
+            Status = OrderStatus.Cancelled;
+            Description = reason;
+            UpdateTimestamp();
+        }
+
+        private void RecalculateTotals()
+        {
+            var total = _items.Sum(i => i.TotalPrice.Value);
+            TotalAmount = new Money(total);
+            FinalAmount = new Money(total - DiscountAmount.Value);
         }
     }
 }

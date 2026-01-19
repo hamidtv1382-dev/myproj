@@ -6,15 +6,15 @@ namespace Order_Service.src._01_Domain.Core.Events
     public class OrderCancelledEvent : IDomainEvent
     {
         public Guid OrderId { get; }
-        public OrderNumber OrderNumber { get; }
-        public string UserId { get; }
+        public Guid BuyerId { get; }
+        public string Reason { get; }
         public DateTime OccurredOn { get; }
 
-        public OrderCancelledEvent(Order order)
+        public OrderCancelledEvent(Guid orderId, Guid buyerId, string reason)
         {
-            OrderId = order.Id;
-            OrderNumber = order.OrderNumber;
-            UserId = order.UserId;
+            OrderId = orderId;
+            BuyerId = buyerId;
+            Reason = reason;
             OccurredOn = DateTime.UtcNow;
         }
     }

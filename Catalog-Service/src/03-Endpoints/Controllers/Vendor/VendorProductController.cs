@@ -60,40 +60,34 @@ namespace Catalog_Service.src._03_Endpoints.Controllers.Vendor
 
         [HttpGet]
         public async Task<ActionResult<PagedResponse<VendorProductResponse>>> GetProducts(
-            [FromQuery] VendorProductSearchRequest request,
-            CancellationToken cancellationToken)
+             [FromQuery] VendorProductSearchRequest request,
+             CancellationToken cancellationToken)
         {
             await _searchValidator.ValidateAndThrowAsync(request, cancellationToken);
 
-            var vendorUserId = GetCurrentUserId();
-
-            (IEnumerable<Product> products, int totalCount) result;
-
-            result = await _productService.GetPagedAsync(
+            var (products, totalCount) = await _productService.GetPagedAsync(
                 request.PageNumber,
                 request.PageSize,
                 request.SearchTerm,
                 request.CategoryId,
                 request.BrandId,
-                null, // Status: حذف شد چون در DTO وجود ندارد
+                null, // status
                 request.MinPrice,
                 request.MaxPrice,
                 request.SortBy,
                 request.SortAscending,
-                vendorUserId,
                 cancellationToken);
 
-            var productResponses = _mapper.Map<IEnumerable<VendorProductResponse>>(result.products);
+            var productResponses = _mapper.Map<IEnumerable<VendorProductResponse>>(products);
 
             return Ok(new PagedResponse<VendorProductResponse>
             {
                 Items = productResponses,
-                TotalCount = result.totalCount,
+                TotalCount = totalCount,
                 PageNumber = request.PageNumber,
                 PageSize = request.PageSize
             });
         }
-
         [HttpGet("{id}")]
         public async Task<ActionResult<VendorProductResponse>> GetProduct(int id, CancellationToken cancellationToken)
         {
