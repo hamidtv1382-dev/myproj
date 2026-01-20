@@ -38,7 +38,10 @@ namespace Order_Service.src._01_Domain.Core.Entities
             FinalAmount = Money.Zero();
             CreatedAt = DateTime.UtcNow;
         }
-
+        public void MarkAsRefunded()
+        {
+            Status = OrderStatus.Refunded;
+        }
         public void AddItem(OrderItem item)
         {
             if (Status != OrderStatus.Pending)
