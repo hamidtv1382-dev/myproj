@@ -35,6 +35,20 @@ namespace Order_Service.src._01_Domain.Core.Entities
             TimesUsed = 0;
         }
 
+        // متد جدید برای آپدیت امن
+        public void UpdateDetails(string? description, DiscountType? type, decimal? value, Money? minAmount, DateTime? start, DateTime? end, int? usageLimit)
+        {
+            if (description != null) Description = description;
+            if (type.HasValue) Type = type.Value;
+            if (value.HasValue) Value = value.Value;
+            if (minAmount != null) MinimumOrderAmount = minAmount;
+            if (start.HasValue) StartDate = start;
+            if (end.HasValue) EndDate = end;
+            if (usageLimit.HasValue) UsageLimit = usageLimit.Value;
+
+            UpdateTimestamp();
+        }
+
         public Money CalculateDiscountAmount(Money orderTotal)
         {
             if (!CanApply(orderTotal))
@@ -73,6 +87,12 @@ namespace Order_Service.src._01_Domain.Core.Entities
         public void Deactivate()
         {
             IsActive = false;
+            UpdateTimestamp();
+        }
+
+        public void Activate()
+        {
+            IsActive = true;
             UpdateTimestamp();
         }
     }

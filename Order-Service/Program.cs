@@ -33,15 +33,14 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// HTTP request pipeline
-app.UseMiddleware<LoggingMiddleware>();
-app.UseMiddleware<ExceptionHandlingMiddleware>();
-
 app.UseHttpsRedirection();
 
 app.UseCors("AllowAll");
 
-app.UseAuthentication();
+
+app.UseMiddleware<LoggingMiddleware>();
+app.UseMiddleware<ExceptionHandlingMiddleware>();
+app.UseAuthentication(); // ⚡ قبل از Authorization و قبل از استفاده از User
 app.UseAuthorization();
 
 app.MapControllers();

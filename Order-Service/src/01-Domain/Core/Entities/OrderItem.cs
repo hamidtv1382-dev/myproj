@@ -7,7 +7,7 @@ namespace Order_Service.src._01_Domain.Core.Entities
     {
         public Guid Id { get; private set; }
         public Guid OrderId { get; private set; }
-        public Guid ProductId { get; private set; }
+        public int ProductId { get; private set; }
         public string ProductName { get; private set; }
         public string? ImageUrl { get; private set; }
         public Money UnitPrice { get; private set; }
@@ -16,7 +16,7 @@ namespace Order_Service.src._01_Domain.Core.Entities
 
         protected OrderItem() { }
 
-        public OrderItem(Guid id, Guid orderId, Guid productId, string productName, string? imageUrl, Money unitPrice, int quantity)
+        public OrderItem(Guid id, Guid orderId, int productId, string productName, string? imageUrl, Money unitPrice, int quantity)
         {
             Id = id;
             OrderId = orderId;

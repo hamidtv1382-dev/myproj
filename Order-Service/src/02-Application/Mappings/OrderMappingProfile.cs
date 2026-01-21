@@ -3,16 +3,19 @@ using Order_Service.src._01_Domain.Core.ValueObjects;
 using Order_Service.src._02_Application.DTOs.Requests;
 using Order_Service.src._02_Application.DTOs.Responses;
 using static System.Runtime.InteropServices.JavaScript.JSType;
-using AutoMapper;
 using Order_Service.src._01_Domain.Core.Enums;
 
 namespace Order_Service.src._02_Application.Mappings
 {
-    public class OrderMappingProfile : Profile
+    public class OrderMappingProfile : AutoMapper.Profile
     {
         public OrderMappingProfile()
         {
             // Entity to DTO Mapping
+            CreateMap<Discount, DiscountDetailResponseDto>()
+              .ForMember(dest => dest.MinimumOrderAmount, opt => opt.MapFrom(src => src.MinimumOrderAmount.Value));
+
+            CreateMap<Discount, DiscountSummaryResponseDto>();
             CreateMap<Order, OrderDetailResponseDto>()
                 .ForMember(dest => dest.ShippingAddress, opt => opt.MapFrom(src => src.ShippingAddress))
                 .ForMember(dest => dest.TotalAmount, opt => opt.MapFrom(src => src.TotalAmount.Value))
@@ -30,12 +33,13 @@ namespace Order_Service.src._02_Application.Mappings
                 .ForMember(dest => dest.TotalPrice, opt => opt.MapFrom(src => src.TotalPrice.Value));
 
             CreateMap<Basket, BasketDetailResponseDto>()
-                .ForMember(dest => dest.TotalAmount, opt => opt.MapFrom(src => src.TotalAmount.Value));
+              .ForMember(dest => dest.TotalAmount, opt => opt.MapFrom(src => src.TotalAmount.Value))
+              // مپ کردن دستی برای پراپرتی‌های محاسباتی حذف می‌شود تا در سرویس هندل شود
+              .ForMember(dest => dest.Items, opt => opt.MapFrom(src => src.Items));
 
             CreateMap<BasketItem, BasketDetailResponseDto.BasketItemResponseDto>()
                 .ForMember(dest => dest.UnitPrice, opt => opt.MapFrom(src => src.UnitPrice.Value))
                 .ForMember(dest => dest.TotalPrice, opt => opt.MapFrom(src => src.TotalPrice.Value));
-
             CreateMap<Payment, PaymentResponseDto>()
                 .ForMember(dest => dest.IsSuccessful, opt => opt.MapFrom(src => src.Status == _01_Domain.Core.Enums.PaymentStatus.Completed));
 

@@ -27,6 +27,13 @@ namespace Order_Service.src._03_Infrastructure.Data.Configurations
             builder.Property(d => d.IsActive).IsRequired();
 
             builder.Ignore(d => d.DomainEvents);
+
+            // Value Objects Mapping
+            builder.OwnsOne(d => d.MinimumOrderAmount, navigationBuilder =>
+            {
+                navigationBuilder.Property(m => m.Value).HasColumnName("MinimumOrderAmountValue").HasColumnType("decimal(18,0)");
+                navigationBuilder.Property(m => m.Currency).HasColumnName("MinimumOrderAmountCurrency").HasMaxLength(3).HasDefaultValue("IRR");
+            });
         }
     }
 }

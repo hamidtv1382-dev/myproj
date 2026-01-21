@@ -20,6 +20,13 @@ namespace Order_Service.src._03_Infrastructure.Data.Configurations
             builder.Property(bi => bi.Quantity).IsRequired();
 
             builder.Ignore(bi => bi.TotalPrice);
+
+            // Value Objects Mapping
+            builder.OwnsOne(bi => bi.UnitPrice, navigationBuilder =>
+            {
+                navigationBuilder.Property(m => m.Value).HasColumnName("UnitPriceValue").HasColumnType("decimal(18,0)");
+                navigationBuilder.Property(m => m.Currency).HasColumnName("UnitPriceCurrency").HasMaxLength(3).HasDefaultValue("IRR");
+            });
         }
     }
 }

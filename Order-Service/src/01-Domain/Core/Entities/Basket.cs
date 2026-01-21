@@ -9,7 +9,10 @@ namespace Order_Service.src._01_Domain.Core.Entities
         public Guid BuyerId { get; private set; }
         private readonly List<BasketItem> _items;
         public IReadOnlyCollection<BasketItem> Items => _items.AsReadOnly();
+
         public Guid? DiscountId { get; private set; }
+        public Discount? AppliedDiscount { get; private set; }
+
         public Money TotalAmount { get; private set; }
         public DateTime? ExpiresAt { get; private set; }
 
@@ -43,7 +46,7 @@ namespace Order_Service.src._01_Domain.Core.Entities
             UpdateTimestamp();
         }
 
-        public void RemoveItem(Guid productId)
+        public void RemoveItem(int productId)
         {
             var item = _items.FirstOrDefault(i => i.ProductId == productId);
             if (item != null)
@@ -54,7 +57,7 @@ namespace Order_Service.src._01_Domain.Core.Entities
             }
         }
 
-        public void UpdateItemQuantity(Guid productId, int quantity)
+        public void UpdateItemQuantity(int productId, int quantity)
         {
             if (quantity <= 0)
             {
@@ -75,10 +78,12 @@ namespace Order_Service.src._01_Domain.Core.Entities
         {
             _items.Clear();
             DiscountId = null;
+            AppliedDiscount = null; // پاک کردن رفرنس در مموری
             CalculateTotal();
             UpdateTimestamp();
         }
 
+        // فقط شناسه را ست می‌کند
         public void ApplyDiscount(Guid discountId)
         {
             DiscountId = discountId;
@@ -88,6 +93,7 @@ namespace Order_Service.src._01_Domain.Core.Entities
         public void RemoveDiscount()
         {
             DiscountId = null;
+            AppliedDiscount = null;
             UpdateTimestamp();
         }
 

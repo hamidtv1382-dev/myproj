@@ -22,6 +22,13 @@ namespace Order_Service.src._03_Infrastructure.Data.Configurations
                 .OnDelete(DeleteBehavior.Cascade);
 
             builder.Ignore(b => b.DomainEvents);
+
+            // Value Objects Mapping
+            builder.OwnsOne(b => b.TotalAmount, navigationBuilder =>
+            {
+                navigationBuilder.Property(m => m.Value).HasColumnName("TotalAmountValue").HasColumnType("decimal(18,0)");
+                navigationBuilder.Property(m => m.Currency).HasColumnName("TotalAmountCurrency").HasMaxLength(3).HasDefaultValue("IRR");
+            });
         }
     }
 }

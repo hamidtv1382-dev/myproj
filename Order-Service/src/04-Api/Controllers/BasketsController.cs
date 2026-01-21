@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Order_Service.src._02_Application.DTOs.Requests;
 using Order_Service.src._02_Application.DTOs.Responses;
 using Order_Service.src._02_Application.Services.Interfaces;
@@ -8,6 +9,7 @@ namespace Order_Service.src._04_Api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class BasketsController : ControllerBase
     {
         private readonly IBasketApplicationService _basketService;
@@ -18,10 +20,11 @@ namespace Order_Service.src._04_Api.Controllers
             _basketService = basketService;
             _logger = logger;
         }
+       
 
         private Guid GetUserId()
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+            var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
                             ?? User.FindFirst("sub")?.Value;
 
             if (Guid.TryParse(userIdClaim, out var userId))
@@ -55,7 +58,7 @@ namespace Order_Service.src._04_Api.Controllers
         }
 
         [HttpDelete("items/{productId}")]
-        public async Task<ActionResult<BasketDetailResponseDto>> RemoveItem(Guid productId)
+        public async Task<ActionResult<BasketDetailResponseDto>> RemoveItem(int productId)
         {
             var userId = GetUserId();
             var request = new RemoveItemFromBasketRequestDto { ProductId = productId };

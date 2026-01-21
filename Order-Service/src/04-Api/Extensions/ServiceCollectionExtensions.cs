@@ -1,7 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using Order_Service.src._01_Domain.Core.Interfaces.Repositories;
 using Order_Service.src._01_Domain.Core.Interfaces.UnitOfWork;
 using Order_Service.src._01_Domain.Services.Implementations;
@@ -13,6 +11,9 @@ using Order_Service.src._03_Infrastructure.Caching;
 using Order_Service.src._03_Infrastructure.Data;
 using Order_Service.src._03_Infrastructure.Repositories;
 using Order_Service.src._03_Infrastructure.Services.External;
+using Order_Service.src._04_Api.Security;
+using StackExchange.Redis;
+using System.Security.Claims;
 
 namespace Order_Service.src._04_Api.Extensions
 {
@@ -20,11 +21,11 @@ namespace Order_Service.src._04_Api.Extensions
     {
         public static IServiceCollection AddApplicationServices(this IServiceCollection services, IConfiguration configuration)
         {
-            // Register Application Services
             services.AddScoped<IOrderApplicationService, OrderApplicationService>();
             services.AddScoped<IBasketApplicationService, BasketApplicationService>();
             services.AddScoped<IPaymentApplicationService, PaymentApplicationService>();
             services.AddScoped<IRefundApplicationService, RefundApplicationService>();
+            services.AddScoped<IAdminDiscountApplicationService, AdminDiscountApplicationService>();
 
             return services;
         }
@@ -54,21 +55,38 @@ namespace Order_Service.src._04_Api.Extensions
             services.AddScoped<IDiscountRepository, DiscountRepository>();
             services.AddScoped<IPaymentRepository, PaymentRepository>();
             services.AddScoped<IRefundRepository, RefundRepository>();
+            services.AddScoped<IAdminDiscountRepository, AdminDiscountRepository>();
 
             // Unit of Work
             services.AddScoped<IUnitOfWork, UnitOfWork>();
 
-            // External Services (HTTP Clients)
-            services.AddHttpClient<CatalogServiceClient>();
-            services.AddHttpClient<PaymentServiceClient>();
-            services.AddHttpClient<SellerFinanceServiceClient>();
-
-            // Redis
-            services.AddStackExchangeRedisCache(options =>
+            // External HTTP Clients with BaseAddress
+            services.AddHttpClient<CatalogServiceClient>(client =>
             {
-                options.Configuration = configuration.GetConnectionString("Redis");
-                options.InstanceName = "OrderService_";
+                client.BaseAddress = new Uri(configuration["ExternalServices:CatalogService"]);
             });
+
+            services.AddHttpClient<PaymentServiceClient>(client =>
+            {
+                client.BaseAddress = new Uri(configuration["ExternalServices:PaymentService"]);
+            });
+
+            services.AddHttpClient<SellerFinanceServiceClient>(client =>
+            {
+                client.BaseAddress = new Uri(configuration["ExternalServices:SellerFinanceService"]);
+            });
+
+            // Payment Gateway Implementation
+            services.AddScoped<IPaymentGateway, PaymentGatewayService>();
+
+            // Redis ConnectionMultiplexer
+            services.AddSingleton<IConnectionMultiplexer>(sp =>
+            {
+                var redisConfig = ConfigurationOptions.Parse(configuration.GetConnectionString("Redis"), true);
+                return ConnectionMultiplexer.Connect(redisConfig);
+            });
+
+            // Redis Cache Service
             services.AddSingleton<ICacheService, RedisCacheService>();
 
             return services;
@@ -76,24 +94,40 @@ namespace Order_Service.src._04_Api.Extensions
 
         public static IServiceCollection AddAuthenticationServices(this IServiceCollection services, IConfiguration configuration)
         {
-            services.AddAuthentication(options =>
-            {
-                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-            })
-            .AddJwtBearer(options =>
-            {
-                options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
+            services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+                .AddJwtBearer(options =>
                 {
-                    ValidateIssuer = true,
-                    ValidateAudience = true,
-                    ValidateLifetime = true,
-                    ValidateIssuerSigningKey = true,
-                    ValidIssuer = configuration["Jwt:Issuer"],
-                    ValidAudience = configuration["Jwt:Audience"],
-                    IssuerSigningKey = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(
-                        System.Text.Encoding.UTF8.GetBytes(configuration["Jwt:Key"]))
-                };
+                    options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
+                    {
+                        ValidateIssuer = true,
+                        ValidateAudience = true,
+                        ValidateLifetime = true,
+                        ValidateIssuerSigningKey = true,
+                        ValidIssuer = configuration["JwtSettings:Issuer"],
+                        ValidAudience = configuration["JwtSettings:Audience"],
+                        IssuerSigningKey = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(
+                         System.Text.Encoding.UTF8.GetBytes(configuration["JwtSettings:SecretKey"])),
+
+                        // *** اصلاحیه نهایی ***
+                        RoleClaimType = ClaimTypes.Role,
+                        // این خط به سیستم می‌گوید اگر user_id در توکن بود، آن را به عنوان NameIdentifier در نظر بگیر
+                        NameClaimType = "user_id"
+                    };
+
+                    options.Events = new Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerEvents
+                    {
+                        OnTokenValidated = ctx =>
+                        {
+                            Console.WriteLine("Token validated. Claims:");
+                            foreach (var c in ctx.Principal.Claims)
+                                Console.WriteLine($"{c.Type} = {c.Value}");
+                            return Task.CompletedTask;
+                        }
+                    };
+                });
+            services.AddAuthorization(options =>
+            {
+                AuthorizationPolicies.Configure(options);
             });
 
             return services;
@@ -104,5 +138,6 @@ namespace Order_Service.src._04_Api.Extensions
             services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
             return services;
         }
+
     }
 }

@@ -2,10 +2,10 @@
 {
     public class InsufficientStockException : Exception
     {
-        public Guid ProductId { get; }
+        public int ProductId { get; }
         public int RequestedQuantity { get; }
 
-        public InsufficientStockException(Guid productId, int requestedQuantity)
+        public InsufficientStockException(int productId, int requestedQuantity)
             : base($"Insufficient stock for product ID '{productId}'. Requested: {requestedQuantity}.")
         {
             ProductId = productId;

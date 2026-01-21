@@ -4,7 +4,7 @@ namespace Order_Service.src._01_Domain.Services.Implementations
 {
     public class InventoryService : IInventoryService
     {
-        public async Task<bool> CheckStockAsync(Guid productId, int quantity)
+        public async Task<bool> CheckStockAsync(int productId, int quantity)
         {
             // In a real implementation, this would call an external Inventory Microservice via HTTP/gRPC.
             // For domain service purposes, we simulate the check.
@@ -12,14 +12,14 @@ namespace Order_Service.src._01_Domain.Services.Implementations
             return true;
         }
 
-        public async Task<bool> ReserveStockAsync(Guid productId, int quantity)
+        public async Task<bool> ReserveStockAsync(int productId, int quantity)
         {
             // Simulate external call
             await Task.Delay(10);
             return true;
         }
 
-        public async Task<bool> ReleaseStockAsync(Guid productId, int quantity)
+        public async Task<bool> ReleaseStockAsync(int productId, int quantity)
         {
             // Simulate external call
             await Task.Delay(10);

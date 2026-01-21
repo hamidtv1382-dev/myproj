@@ -2,8 +2,8 @@
 {
     public interface IInventoryService
     {
-        Task<bool> CheckStockAsync(Guid productId, int quantity);
-        Task<bool> ReserveStockAsync(Guid productId, int quantity);
-        Task<bool> ReleaseStockAsync(Guid productId, int quantity);
+        Task<bool> CheckStockAsync(int productId, int quantity);
+        Task<bool> ReserveStockAsync(int productId, int quantity);
+        Task<bool> ReleaseStockAsync(int productId, int quantity);
     }
 }

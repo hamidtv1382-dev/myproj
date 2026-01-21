@@ -25,6 +25,15 @@ namespace Order_Service.src._03_Infrastructure.Repositories
         {
             return await _context.Baskets
                 .Include(b => b.Items)
+                .Include(b => b.AppliedDiscount)
+                .FirstOrDefaultAsync(b => b.BuyerId == buyerId);
+        }
+
+        public async Task<Basket?> GetByBuyerIdWithDiscountAsync(Guid buyerId)
+        {
+            return await _context.Baskets
+                .Include(b => b.Items)
+                .Include(b => b.AppliedDiscount) 
                 .FirstOrDefaultAsync(b => b.BuyerId == buyerId);
         }
 

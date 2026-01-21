@@ -1,4 +1,5 @@
-﻿using Polly;
+﻿using System.Net.Http.Json;
+using Polly;
 using Polly.Retry;
 
 namespace Order_Service.src._03_Infrastructure.Services.External
@@ -7,32 +8,75 @@ namespace Order_Service.src._03_Infrastructure.Services.External
     {
         private readonly HttpClient _httpClient;
         private readonly AsyncRetryPolicy<HttpResponseMessage> _retryPolicy;
+        private readonly ILogger<CatalogServiceClient> _logger;
 
-        public CatalogServiceClient(HttpClient httpClient)
+        public CatalogServiceClient(HttpClient httpClient, ILogger<CatalogServiceClient> logger)
         {
             _httpClient = httpClient;
+            _logger = logger;
             _retryPolicy = Policy
                 .Handle<HttpRequestException>()
                 .OrResult<HttpResponseMessage>(r => !r.IsSuccessStatusCode)
-                .WaitAndRetryAsync(3, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)));
+                .WaitAndRetryAsync(3, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
+                    onRetry: (outcome, timeSpan, retryCount, context) =>
+                    {
+                        _logger.LogWarning("Retry {Count} for Catalog Service after {Delay}s due to: {Error}",
+                            retryCount, timeSpan.TotalSeconds, outcome.Exception?.Message);
+                    });
         }
 
-        public async Task<bool> ValidateProductAsync(Guid productId)
+        public async Task<CatalogProductDto?> GetProductByIdAsync(int productId)
+        {
+            // مستقیماً همان عدد را به Catalog Service می‌فرستیم (چون هر دو int هستند)
+            var response = await _retryPolicy.ExecuteAsync(() =>
+                _httpClient.GetAsync($"/api/public/products/{productId}"));
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogError("Catalog Service returned {StatusCode} for ProductId {ProductId}",
+                    response.StatusCode, productId);
+                return null;
+            }
+
+            // مپ کردن پاسخ به مدل داخلی
+            var product = await response.Content.ReadFromJsonAsync<CatalogServiceProductResponse>();
+
+            if (product == null) return null;
+
+            return new CatalogProductDto
+            {
+                Id = product.Id,
+                Name = product.Name,
+                Price = product.Price,
+                ImageUrl = product.ImageUrl
+            };
+        }
+
+        public async Task<bool> ValidateProductAsync(int productId)
         {
             var response = await _retryPolicy.ExecuteAsync(() =>
-                _httpClient.GetAsync($"/api/v1/products/{productId}/validate"));
+                _httpClient.GetAsync($"/api/public/products/{productId}"));
 
             return response.IsSuccessStatusCode;
         }
 
-        public async Task<Dictionary<string, object>?> GetProductPricingAsync(Guid productId)
+        // مدل پاسخ واقعی سرویس کاتالوگ
+        public class CatalogServiceProductResponse
         {
-            var response = await _retryPolicy.ExecuteAsync(() =>
-                _httpClient.GetAsync($"/api/v1/products/{productId}/pricing"));
+            public int Id { get; set; }
+            public string Name { get; set; }
+            public decimal Price { get; set; }
+            public string? ImageUrl { get; set; }
+            public string Sku { get; set; }
+        }
 
-            if (!response.IsSuccessStatusCode) return null;
-
-            return await response.Content.ReadFromJsonAsync<Dictionary<string, object>>();
+        // مدل ساده برای استفاده داخلی
+        public class CatalogProductDto
+        {
+            public int Id { get; set; }
+            public string Name { get; set; }
+            public decimal Price { get; set; }
+            public string? ImageUrl { get; set; }
         }
     }
 }

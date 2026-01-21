@@ -7,6 +7,7 @@ using Order_Service.src._02_Application.DTOs.Requests;
 using Order_Service.src._02_Application.DTOs.Responses;
 using Order_Service.src._02_Application.Exceptions;
 using Order_Service.src._02_Application.Services.Interfaces;
+using Order_Service.src._03_Infrastructure.Services.External;
 
 namespace Order_Service.src._02_Application.Services.Implementations
 {
@@ -16,17 +17,20 @@ namespace Order_Service.src._02_Application.Services.Implementations
         private readonly IDiscountService _discountService;
         private readonly IMapper _mapper;
         private readonly ILogger<BasketApplicationService> _logger;
+        private readonly CatalogServiceClient _catalogClient;
 
         public BasketApplicationService(
             IUnitOfWork unitOfWork,
             IDiscountService discountService,
             IMapper mapper,
-            ILogger<BasketApplicationService> logger)
+            ILogger<BasketApplicationService> logger,
+            CatalogServiceClient catalogClient)
         {
             _unitOfWork = unitOfWork;
             _discountService = discountService;
             _mapper = mapper;
             _logger = logger;
+            _catalogClient = catalogClient;
         }
 
         public async Task<BasketDetailResponseDto> GetBasketAsync(Guid buyerId)
@@ -35,11 +39,17 @@ namespace Order_Service.src._02_Application.Services.Implementations
 
             if (basket == null)
             {
-                // Return empty basket representation
-                return new BasketDetailResponseDto { Id = Guid.Empty, Items = new List<BasketDetailResponseDto.BasketItemResponseDto>(), TotalAmount = 0 };
+                return new BasketDetailResponseDto
+                {
+                    Id = Guid.Empty,
+                    Items = new List<BasketDetailResponseDto.BasketItemResponseDto>(),
+                    TotalAmount = 0,
+                    DiscountAmount = 0,
+                    FinalAmount = 0
+                };
             }
 
-            return _mapper.Map<BasketDetailResponseDto>(basket);
+            return await MapBasketToResponseDtoAsync(basket);
         }
 
         public async Task<BasketDetailResponseDto> AddItemAsync(Guid buyerId, AddItemToBasketRequestDto request)
@@ -48,34 +58,39 @@ namespace Order_Service.src._02_Application.Services.Implementations
 
             if (basket == null)
             {
-                // Create new basket if not exists
                 basket = new Basket(Guid.NewGuid(), buyerId, TimeSpan.FromDays(7));
                 await _unitOfWork.Baskets.AddAsync(basket);
             }
 
-            // NOTE: In a real app, you must fetch Product Details (Name, Price) from Catalog Service here.
-            // Mocking product details for this snippet:
-            var productName = "Sample Product";
-            var unitPrice = new Money(100000); // 100,000 IRR
-            var imageUrl = "https://example.com/image.jpg";
+            var productInfo = await _catalogClient.GetProductByIdAsync(request.ProductId);
+
+            if (productInfo == null)
+            {
+                throw new KeyNotFoundException($"Product with ID {request.ProductId} not found in Catalog Service.");
+            }
+
+            var productName = productInfo.Name;
+            var unitPrice = new Money(productInfo.Price, "IRR");
+            var imageUrl = productInfo.ImageUrl ?? "https://example.com/image.jpg";
 
             var item = new BasketItem(Guid.NewGuid(), basket.Id, request.ProductId, productName, imageUrl, unitPrice, request.Quantity);
             basket.AddItem(item);
 
             await _unitOfWork.SaveChangesAsync();
-            return _mapper.Map<BasketDetailResponseDto>(basket);
+
+            return await MapBasketToResponseDtoAsync(basket);
         }
 
         public async Task<BasketDetailResponseDto> UpdateItemAsync(Guid buyerId, UpdateBasketItemRequestDto request)
         {
             var basket = await _unitOfWork.Baskets.GetByBuyerIdAsync(buyerId);
             if (basket == null)
-                throw new BasketNotFoundException(buyerId.ToString()); // Conceptual exception
+                throw new BasketNotFoundException(buyerId.ToString());
 
             basket.UpdateItemQuantity(request.ProductId, request.Quantity);
             await _unitOfWork.SaveChangesAsync();
 
-            return _mapper.Map<BasketDetailResponseDto>(basket);
+            return await MapBasketToResponseDtoAsync(basket);
         }
 
         public async Task<BasketDetailResponseDto> RemoveItemAsync(Guid buyerId, RemoveItemFromBasketRequestDto request)
@@ -87,7 +102,7 @@ namespace Order_Service.src._02_Application.Services.Implementations
             basket.RemoveItem(request.ProductId);
             await _unitOfWork.SaveChangesAsync();
 
-            return _mapper.Map<BasketDetailResponseDto>(basket);
+            return await MapBasketToResponseDtoAsync(basket);
         }
 
         public async Task<BasketDetailResponseDto> ApplyDiscountAsync(Guid buyerId, ApplyDiscountRequestDto request)
@@ -101,9 +116,12 @@ namespace Order_Service.src._02_Application.Services.Implementations
                 throw new InvalidDiscountCodeException(request.DiscountCode);
 
             basket.ApplyDiscount(discount.Id);
+
             await _unitOfWork.SaveChangesAsync();
 
-            return _mapper.Map<BasketDetailResponseDto>(basket);
+            basket = await _unitOfWork.Baskets.GetByBuyerIdWithDiscountAsync(buyerId);
+
+            return await MapBasketToResponseDtoAsync(basket);
         }
 
         public async Task ClearBasketAsync(Guid buyerId)
@@ -114,6 +132,27 @@ namespace Order_Service.src._02_Application.Services.Implementations
                 basket.Clear();
                 await _unitOfWork.SaveChangesAsync();
             }
+        }
+
+        private async Task<BasketDetailResponseDto> MapBasketToResponseDtoAsync(Basket basket)
+        {
+            var dto = _mapper.Map<BasketDetailResponseDto>(basket);
+
+            if (basket.AppliedDiscount != null)
+            {
+                var discountMoney = basket.AppliedDiscount.CalculateDiscountAmount(basket.TotalAmount);
+
+                dto.DiscountAmount = discountMoney.Value;
+                dto.FinalAmount = basket.TotalAmount.Value - discountMoney.Value;
+                dto.AppliedDiscountCode = basket.AppliedDiscount.Code;
+            }
+            else
+            {
+                dto.DiscountAmount = 0;
+                dto.FinalAmount = basket.TotalAmount.Value;
+            }
+
+            return dto;
         }
     }
 }
