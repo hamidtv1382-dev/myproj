@@ -17,7 +17,7 @@ namespace Order_Service.src._01_Domain.Core.Entities
         public Money FinalAmount { get; private set; }
         public OrderStatus Status { get; private set; }
         public Guid? DiscountId { get; private set; }
-        public DateTime? OrderDate { get; private set; }
+        public DateTime? OrderDate { get; set; }
         public string? Description { get; private set; }
 
         protected Order()
@@ -38,6 +38,16 @@ namespace Order_Service.src._01_Domain.Core.Entities
             FinalAmount = Money.Zero();
             CreatedAt = DateTime.UtcNow;
         }
+
+        public void UpdateShippingAddress(ShippingAddress newAddress)
+        {
+            if (Status == OrderStatus.Shipped || Status == OrderStatus.Delivered)
+                throw new InvalidOperationException("Cannot change address for shipped or delivered orders.");
+
+            ShippingAddress = newAddress;
+            UpdateTimestamp();
+        }
+
         public void MarkAsRefunded()
         {
             Status = OrderStatus.Refunded;

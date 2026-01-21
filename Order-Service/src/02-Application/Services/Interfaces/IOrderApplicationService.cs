@@ -9,7 +9,7 @@ namespace Order_Service.src._02_Application.Services.Interfaces
         Task<OrderDetailResponseDto> GetOrderByIdAsync(Guid orderId);
         Task<IEnumerable<OrderSummaryResponseDto>> GetOrdersByBuyerIdAsync(Guid buyerId);
         Task<OrderDetailResponseDto> UpdateOrderAsync(UpdateOrderRequestDto request);
-        Task CancelOrderAsync(CancelOrderRequestDto request);
+        Task<OrderDetailResponseDto> CancelOrderAsync(CancelOrderRequestDto request);
         Task<TrackOrderResponseDto> TrackOrderAsync(TrackOrderRequestDto request);
     }
 }

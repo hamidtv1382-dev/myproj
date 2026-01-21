@@ -34,25 +34,44 @@ namespace Order_Service.src._02_Application.Services.Implementations
 
         public async Task<OrderDetailResponseDto> CreateOrderAsync(Guid buyerId, CreateOrderRequestDto request)
         {
-            // 1. Get or Create Basket (Simplified: Assuming items exist in active basket)
             var basket = await _unitOfWork.Baskets.GetByBuyerIdAsync(buyerId);
             if (basket == null || !basket.Items.Any())
                 throw new ArgumentException("Basket is empty.");
 
-            // 2. Map Request to Entities
-            var shippingAddress = _mapper.Map<ShippingAddress>(request);
+            var shippingAddress = new ShippingAddress(
+                request.FirstName,
+                request.LastName,
+                request.PhoneNumber,
+                request.Country,
+                request.City,
+                request.State,
+                request.Street,
+                request.ZipCode,
+                request.BuildingNumber,
+                request.ApartmentNumber
+            );
 
-            // 3. Create Order via Domain Service
-            var orderItems = _mapper.Map<List<OrderItem>>(basket.Items);
+            var orderItems = new List<OrderItem>();
+            foreach (var basketItem in basket.Items)
+            {
+                orderItems.Add(new OrderItem(
+                    Guid.NewGuid(),
+                    Guid.NewGuid(),
+                    basketItem.ProductId,
+                    basketItem.ProductName,
+                    basketItem.ImageUrl,
+                    basketItem.UnitPrice,
+                    basketItem.Quantity
+                ));
+            }
+
             var order = await _orderDomainService.CreateOrderAsync(buyerId, shippingAddress, orderItems, request.DiscountCode);
 
-            // 4. Reserve Stock
             foreach (var item in order.Items)
             {
                 var reserved = await _inventoryService.ReserveStockAsync(item.ProductId, item.Quantity);
                 if (!reserved)
                 {
-                    // Compensating Transaction: Release previously reserved stocks
                     foreach (var reservedItem in order.Items.Where(i => i.ProductId != item.ProductId))
                     {
                         await _inventoryService.ReleaseStockAsync(reservedItem.ProductId, reservedItem.Quantity);
@@ -61,9 +80,8 @@ namespace Order_Service.src._02_Application.Services.Implementations
                 }
             }
 
-            // 5. Persist
             await _unitOfWork.Orders.AddAsync(order);
-            basket.Clear(); // Clear basket items after order creation
+            basket.Clear();
             _unitOfWork.Baskets.Update(basket);
 
             await _unitOfWork.SaveChangesAsync();
@@ -92,16 +110,20 @@ namespace Order_Service.src._02_Application.Services.Implementations
             if (order == null)
                 throw new OrderNotFoundException(request.OrderId);
 
-            // Note: Description logic handled here or via a method if available in entity
-            // Assuming strict DDD, Description might be immutable or have specific behavior.
-            // For now, assuming we cannot set Description directly as setter might be protected/private.
-            // If the entity requires a method like UpdateDescription, uncomment the line below:
-            // order.UpdateDescription(request.Description); 
+            var newAddress = new ShippingAddress(
+                request.FirstName,
+                request.LastName,
+                request.PhoneNumber,
+                request.Country,
+                request.City,
+                request.State,
+                request.Street,
+                request.ZipCode,
+                request.BuildingNumber,
+                request.ApartmentNumber
+            );
 
-            // If the error persists because 'Description' has no public set, we must rely on the Domain Layer behavior.
-            // However, to resolve the specific error reported:
-            // We assume 'Description' can be updated if the entity allows, or we skip it if not.
-            // Here we simply update the entity (EF Core might track other changes).
+            order.UpdateShippingAddress(newAddress);
 
             _unitOfWork.Orders.Update(order);
             await _unitOfWork.SaveChangesAsync();
@@ -109,7 +131,7 @@ namespace Order_Service.src._02_Application.Services.Implementations
             return _mapper.Map<OrderDetailResponseDto>(order);
         }
 
-        public async Task CancelOrderAsync(CancelOrderRequestDto request)
+        public async Task<OrderDetailResponseDto> CancelOrderAsync(CancelOrderRequestDto request)
         {
             var order = await _unitOfWork.Orders.GetByIdAsync(request.OrderId);
             if (order == null)
@@ -117,7 +139,6 @@ namespace Order_Service.src._02_Application.Services.Implementations
 
             _orderDomainService.CancelOrder(order, request.Reason ?? "User requested cancellation");
 
-            // Release Stock
             foreach (var item in order.Items)
             {
                 await _inventoryService.ReleaseStockAsync(item.ProductId, item.Quantity);
@@ -125,6 +146,8 @@ namespace Order_Service.src._02_Application.Services.Implementations
 
             _unitOfWork.Orders.Update(order);
             await _unitOfWork.SaveChangesAsync();
+
+            return _mapper.Map<OrderDetailResponseDto>(order);
         }
 
         public async Task<TrackOrderResponseDto> TrackOrderAsync(TrackOrderRequestDto request)

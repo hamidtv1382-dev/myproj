@@ -63,13 +63,13 @@ namespace Order_Service.src._04_Api.Controllers
         }
 
         [HttpPost("{id}/cancel")]
-        public async Task<IActionResult> CancelOrder(Guid id, [FromBody] CancelOrderRequestDto request)
+        public async Task<ActionResult<OrderDetailResponseDto>> CancelOrder(Guid id, [FromBody] CancelOrderRequestDto request)
         {
             if (id != request.OrderId) return BadRequest("ID mismatch");
 
             request.OrderId = id;
-            await _orderService.CancelOrderAsync(request);
-            return NoContent();
+            var result = await _orderService.CancelOrderAsync(request);
+            return Ok(result);
         }
 
         [HttpPost("track")]
