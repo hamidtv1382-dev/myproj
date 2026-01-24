@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 18
-VisualStudioVersion = 18.0.11222.15 d18.0
+VisualStudioVersion = 18.0.11222.15
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
 EndProject
@@ -36,6 +36,10 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IdentityService", "IdentityService\IdentityService.csproj", "{B064A984-303A-42BA-9918-C36E3F2A0684}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MarketHub.Gateway", "MarketHub.Gateway\MarketHub.Gateway.csproj", "{CF22AD94-D3CB-418F-8007-8D854B422C0B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Finance-Service", "Finance-Service\Finance-Service.csproj", "{1C089D30-237C-4C81-BEA2-86B2351662D1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Wallet-Service", "Wallet-Service\Wallet-Service.csproj", "{39308D9B-710F-416A-8D2B-E281F99C66D3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -91,6 +95,14 @@ Global
 		{CF22AD94-D3CB-418F-8007-8D854B422C0B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CF22AD94-D3CB-418F-8007-8D854B422C0B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CF22AD94-D3CB-418F-8007-8D854B422C0B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1C089D30-237C-4C81-BEA2-86B2351662D1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1C089D30-237C-4C81-BEA2-86B2351662D1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1C089D30-237C-4C81-BEA2-86B2351662D1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1C089D30-237C-4C81-BEA2-86B2351662D1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{39308D9B-710F-416A-8D2B-E281F99C66D3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{39308D9B-710F-416A-8D2B-E281F99C66D3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{39308D9B-710F-416A-8D2B-E281F99C66D3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{39308D9B-710F-416A-8D2B-E281F99C66D3}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -112,6 +124,8 @@ Global
 		{A12DDC0C-289D-40B1-BFB0-82DF0037D6F8} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 		{B064A984-303A-42BA-9918-C36E3F2A0684} = {CF275DC5-14D4-4704-8C23-220399D2B411}
 		{CF22AD94-D3CB-418F-8007-8D854B422C0B} = {CF275DC5-14D4-4704-8C23-220399D2B411}
+		{1C089D30-237C-4C81-BEA2-86B2351662D1} = {CF275DC5-14D4-4704-8C23-220399D2B411}
+		{39308D9B-710F-416A-8D2B-E281F99C66D3} = {CF275DC5-14D4-4704-8C23-220399D2B411}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {CE5E4472-A596-4661-BE80-EABC1C5B637C}
