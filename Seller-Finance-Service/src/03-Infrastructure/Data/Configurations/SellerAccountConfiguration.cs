@@ -13,12 +13,29 @@ namespace Seller_Finance_Service.src._03_Infrastructure.Data.Configurations
             builder.Property(s => s.SellerId).IsRequired();
             builder.Property(s => s.IsActive).IsRequired();
 
-            // SellerBalance Mapping (Flattened)
-            builder.Ignore(s => s.Balance);
+            // SellerBalance Mapping (Nested Flattened)
+            builder.OwnsOne(s => s.Balance, balance =>
+            {
+                // هندل کردن AvailableBalance (نوع Money)
+                balance.OwnsOne(b => b.AvailableBalance, money =>
+                {
+                    money.Property(m => m.Amount).HasColumnName("AvailableBalanceAmount").HasPrecision(18, 0);
+                    // Currency معمولا ثابت است یا در ستون جدا ذخیره نمی‌شود مگر اینکه نیاز باشد
+                    // money.Property(m => m.Currency).HasColumnName("CurrencyCode"); 
+                });
 
-            builder.Property<decimal>("AvailableBalanceAmount").HasPrecision(18, 0).IsRequired();
-            builder.Property<decimal>("PendingBalanceAmount").HasPrecision(18, 0).IsRequired();
-            builder.Property<decimal>("HoldBalanceAmount").HasPrecision(18, 0).IsRequired();
+                // هندل کردن PendingBalance (نوع Money)
+                balance.OwnsOne(b => b.PendingBalance, money =>
+                {
+                    money.Property(m => m.Amount).HasColumnName("PendingBalanceAmount").HasPrecision(18, 0);
+                });
+
+                // هندل کردن HoldBalance (نوع Money)
+                balance.OwnsOne(b => b.HoldBalance, money =>
+                {
+                    money.Property(m => m.Amount).HasColumnName("HoldBalanceAmount").HasPrecision(18, 0);
+                });
+            });
 
             // BankAccount Mapping
             builder.OwnsOne(s => s.BankAccount, bank =>

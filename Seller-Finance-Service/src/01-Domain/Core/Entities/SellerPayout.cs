@@ -12,7 +12,7 @@ namespace Seller_Finance_Service.src._01_Domain.Core.Entities
         public string? GatewayReferenceId { get; private set; }
         public DateTime? RequestedAt { get; private set; }
         public DateTime? ProcessedAt { get; private set; }
-        public string FailureReason { get; private set; }
+        public string FailureReason { get; private set; } = string.Empty;
         public AuditInfo AuditInfo { get; private set; }
 
         private SellerPayout() { }

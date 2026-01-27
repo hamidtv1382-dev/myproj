@@ -26,7 +26,15 @@ namespace Finance_Service.src._02_Application.Services.Implementations
 
         public async Task<SettlementResponseDto> CreateSettlementAsync(CreateSettlementRequestDto request)
         {
-            var settlement = await _financeDomainService.CreateSellerSettlementAsync(request.SellerId);
+            // --- اصلاح شده: ارسال پارامترهای جدید به متد Domain Service ---
+            var settlement = await _financeDomainService.CreateSellerSettlementAsync(
+                request.SellerId,
+                request.TotalAmount,
+                request.BankAccountInfo ?? string.Empty, // در صورت null بودن، رشته خالی ارسال کن
+                request.DueDate
+            );
+            // ---------------------------------------------------------------
+
             await _unitOfWork.Settlements.AddAsync(settlement);
             await _unitOfWork.SaveChangesAsync();
             return _mapper.MapToSettlementResponseDto(settlement);

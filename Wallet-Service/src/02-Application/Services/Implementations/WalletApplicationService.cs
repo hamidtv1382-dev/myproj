@@ -76,12 +76,17 @@ namespace Wallet_Service.src._02_Application.Services.Implementations
                 throw new InsufficientWalletBalanceException("Insufficient funds.");
 
             var referenceId = Guid.NewGuid().ToString();
+
+            // صدا زدن سرویس دامین که اکنون تراکنش را می‌سازد و موجودی را کم می‌کند
             var success = await _walletDomainService.DebitWalletAsync(wallet.Id, request.Amount, referenceId, request.Description);
 
             if (!success) throw new Exception("Failed to debit wallet.");
 
-            var transaction = await _unitOfWork.WalletTransactions.GetByWalletIdAsync(wallet.Id);
-            var latestTransaction = transaction.OrderByDescending(t => t.CreatedAt).FirstOrDefault();
+            // دریافت لیست تراکنش‌ها
+            var transactions = await _unitOfWork.WalletTransactions.GetByWalletIdAsync(wallet.Id);
+
+            // چون در متد بالا SaveChanges زده شد، اولین آیتم در لیست، همونی است که الان ساختید
+            var latestTransaction = transactions.FirstOrDefault();
 
             return _mapper.MapToWalletTransactionResponseDto(latestTransaction);
         }

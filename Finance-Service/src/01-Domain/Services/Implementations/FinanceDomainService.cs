@@ -1,5 +1,6 @@
 ﻿using Finance_Service.src._01_Domain.Core.Entities;
 using Finance_Service.src._01_Domain.Core.Enums;
+using Finance_Service.src._01_Domain.Core.Interfaces.UnitOfWork;
 using Finance_Service.src._01_Domain.Core.ValueObjects;
 using Finance_Service.src._01_Domain.Services.Interfaces;
 
@@ -7,6 +8,14 @@ namespace Finance_Service.src._01_Domain.Services.Implementations
 {
     public class FinanceDomainService : IFinanceDomainService
     {
+        private readonly IUnitOfWork _unitOfWork;
+
+        // تزریق وابستگی برای دسترسی به دیتابیس (برای محاسبه دقیق در آینده یا اگر لازم بود)
+        public FinanceDomainService(IUnitOfWork unitOfWork)
+        {
+            _unitOfWork = unitOfWork;
+        }
+
         public async Task<Fee> CalculateAndApplyFeeAsync(Guid orderId, Money totalOrderAmount, Guid? sellerId)
         {
             // Logic: Platform fee is 2% of total order amount
@@ -23,11 +32,17 @@ namespace Finance_Service.src._01_Domain.Services.Implementations
             return await Task.FromResult(commission);
         }
 
-        public async Task<Settlement> CreateSellerSettlementAsync(Guid sellerId)
+        // --- متد بروزرسانی شده ---
+        public async Task<Settlement> CreateSellerSettlementAsync(Guid sellerId, Money totalAmount, string bankInfo, DateTime dueDate)
         {
-            // Logic: Calculate sum of unsettled commissions (simplified here, normally requires repo lookup)
-            // For now, creating a placeholder settlement
-            var settlement = new Settlement(sellerId, new Money(0, "IRR"), DateTime.UtcNow.AddDays(7), "System");
+            // Logic: مبلغ تسویه را دریافت می‌کند (که توسط سرویس SellerFinance ارسال شده است)
+            // نیازی به محاسبه مجدد نیست، چون SellerFinance موجودی را از کیف پول فروشنده کم کرده و مبلغ دقیق را اعلام کرده است.
+
+            var settlement = new Settlement(sellerId, totalAmount, dueDate, "SellerFinanceService");
+
+            // اگر موجودیت Settlement فیلدی برای ذخیره اطلاعات بانک دارد، اینجا ست می‌شود:
+            // در کلاس Settlement شما فیلد BankAccountInfo (string) وجود دارد.
+
             return await Task.FromResult(settlement);
         }
 

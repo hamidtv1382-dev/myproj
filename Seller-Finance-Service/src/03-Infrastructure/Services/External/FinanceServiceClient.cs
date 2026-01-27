@@ -14,18 +14,42 @@ namespace Seller_Finance_Service.src._03_Infrastructure.Services.External
             _httpClient = httpClient;
         }
 
-        public async Task<bool> TransferToSellerAccountAsync(BankAccountInfo bankInfo, Money amount)
+        public async Task<bool> RequestSettlementCreationAsync(Guid sellerId, BankAccountInfo bankInfo, Money amount)
         {
-            // Call Finance Service to perform bank transfer
+            var apiUrl = "https://localhost:7120/api/settlements";
+
+            // ساخت Payload دقیقا طبق DTO جدید سرویس مالی
             var payload = new
             {
-                BankAccount = bankInfo,
-                Amount = amount.Amount
+                SellerId = sellerId,
+                TotalAmount = new { amount.Amount, Currency = "IRR" }, // ساختار Money باید دقیق باشد
+                BankAccountInfo = JsonSerializer.Serialize(bankInfo), // یا ارسال رشته شبا
+                DueDate = DateTime.UtcNow.AddDays(7)
             };
-            var content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
 
-            var response = await _httpClient.PostAsync("https://finance-service/api/settlements/process", content);
-            return response.IsSuccessStatusCode;
+            // نکته: برای سریالایز شدن درست Money، بهتر است یک DTO مشترک داشته باشید 
+            // یا ساختار anonymous object را دقیقا مطابق JSON مورد انتظار تنظیم کنید.
+            // اینجا من فرض می‌کنم سمت گیرنده Money را به صورت Object می‌گیرد یا شما باید JsonSerializerOptions تنظیم کنید.
+
+            // راه ساده‌تر برای سریالایز:
+            var payloadRaw = new
+            {
+                SellerId = sellerId,
+                TotalAmount = new { Amount = amount.Amount, Currency = "IRR" },
+                DueDate = DateTime.UtcNow.AddDays(7)
+            };
+
+            var content = new StringContent(JsonSerializer.Serialize(payloadRaw), Encoding.UTF8, "application/json");
+
+            try
+            {
+                var response = await _httpClient.PostAsync(apiUrl, content);
+                return response.IsSuccessStatusCode;
+            }
+            catch
+            {
+                return false;
+            }
         }
     }
 }

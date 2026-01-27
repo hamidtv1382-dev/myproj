@@ -7,7 +7,10 @@ namespace Finance_Service.src._01_Domain.Services.Interfaces
     {
         Task<Fee> CalculateAndApplyFeeAsync(Guid orderId, Money totalOrderAmount, Guid? sellerId);
         Task<Commission> CalculateCommissionAsync(Guid orderId, Guid sellerId, Money saleAmount);
-        Task<Settlement> CreateSellerSettlementAsync(Guid sellerId);
+
+        // متد بروزرسانی شده: پارامترهای مبلغ و اطلاعات بانک اضافه شدند
+        Task<Settlement> CreateSellerSettlementAsync(Guid sellerId, Money totalAmount, string bankInfo, DateTime dueDate);
+
         Task<bool> ProcessSettlementAsync(Guid settlementId);
     }
 }

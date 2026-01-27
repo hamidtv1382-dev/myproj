@@ -5,6 +5,6 @@ namespace Seller_Finance_Service.src._02_Application.Interfaces
     public interface IFinanceService
     {
         // This interface connects to the Global Finance Service to move money to seller's bank
-        Task<bool> TransferToSellerAccountAsync(BankAccountInfo bankInfo, Money amount);
+        Task<bool> RequestSettlementCreationAsync(Guid sellerId, BankAccountInfo bankInfo, Money amount);
     }
 }

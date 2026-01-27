@@ -6,7 +6,11 @@ namespace Seller_Finance_Service.src._01_Domain.Core.Entities
     public class SellerAccount : AggregateRoot
     {
         public Guid SellerId { get; private set; }
-        public SellerBalance Balance { get; private set; }
+
+        // Backing Field initialized to prevent NullReferenceException
+        private SellerBalance _balance = new SellerBalance();
+        public SellerBalance Balance => _balance;
+
         public BankAccountInfo BankAccount { get; private set; }
         public bool IsActive { get; private set; }
         public AuditInfo AuditInfo { get; private set; }
@@ -17,7 +21,7 @@ namespace Seller_Finance_Service.src._01_Domain.Core.Entities
         {
             Id = Guid.NewGuid();
             SellerId = sellerId;
-            Balance = new SellerBalance();
+            // _balance is already initialized by field initializer
             BankAccount = bankAccount;
             IsActive = true;
             AuditInfo = new AuditInfo(createdBy);

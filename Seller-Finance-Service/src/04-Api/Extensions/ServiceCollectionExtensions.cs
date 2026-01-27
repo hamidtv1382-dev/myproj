@@ -22,10 +22,10 @@ namespace Seller_Finance_Service.src._04_Api.Extensions
             services.AddDbContext<AppDbContext>(options =>
                 options.UseSqlServer(connectionString));
 
-            // --- ADD THIS SECTION ---
-            // Register the Mapping Profile so it can be injected
+            // --- Mapping Profile ---
+            // Register the Mapping Profile so it can be injected (Manual Mapping Logic)
             services.AddScoped<SellerFinanceMappingProfile>();
-            // -------------------------
+            // ------------------------
 
             // Domain & Infrastructure Services
             services.AddScoped<ISellerFinanceDomainService, SellerFinanceDomainService>();
@@ -33,9 +33,14 @@ namespace Seller_Finance_Service.src._04_Api.Extensions
             services.AddScoped<ILoggingService, LoggingService>();
 
             // Application Services
+            // Existing Services
             services.AddScoped<ISellerBalanceApplicationService, SellerBalanceApplicationService>();
             services.AddScoped<ISellerPayoutApplicationService, SellerPayoutApplicationService>();
             services.AddScoped<ISellerTransactionApplicationService, SellerTransactionApplicationService>();
+
+            // --- NEW SERVICE ADDED ---
+            services.AddScoped<ISellerAccountApplicationService, SellerAccountApplicationService>();
+            // --------------------------
 
             // Repositories & Unit of Work
             services.AddScoped<IUnitOfWork, UnitOfWork>();

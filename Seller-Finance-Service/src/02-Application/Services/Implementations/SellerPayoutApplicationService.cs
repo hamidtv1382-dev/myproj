@@ -32,28 +32,33 @@ namespace Seller_Finance_Service.src._02_Application.Services.Implementations
 
             var payout = _payoutPolicy.CreatePayout(account, new Money(request.Amount, "IRR"));
 
-            // Deduct from Available Balance immediately
+            // 1. کم کردن موجودی از کیف پول فروشنده (در سیستم خودمان)
             account.Balance.DeductFromAvailable(payout.Amount);
 
-            // Mark as processing
+            // 2. تغییر وضعیت به در حال پردازش
             payout.MarkAsProcessing();
 
             await _unitOfWork.SellerPayouts.AddAsync(payout);
             _unitOfWork.SellerAccounts.UpdateAsync(account);
             await _unitOfWork.SaveChangesAsync();
 
-            // Interact with Finance Service for actual transfer (Async/Background ideally)
-            var transferSuccess = await _financeService.TransferToSellerAccountAsync(account.BankAccount, payout.Amount);
+            // 3. ارسال درخواست به سرویس مالی برای ثبت سند و انجام انتقال بانکی
+            // نکته: اینجا SellerId را هم پاس می‌دهیم
+            var settlementCreated = await _financeService.RequestSettlementCreationAsync(
+                account.SellerId,
+                account.BankAccount,
+                payout.Amount
+            );
 
-            if (transferSuccess)
+            if (settlementCreated)
             {
-                payout.MarkAsCompleted("GATEWAY-" + Guid.NewGuid());
+                payout.MarkAsCompleted("SETTLEMENT-" + Guid.NewGuid());
             }
             else
             {
-                payout.MarkAsFailed("Bank transfer failed");
-                // Refund back to balance
-                account.Balance.ReleaseFromPendingToAvailable(payout.Amount); // Using a method to add back available
+                payout.MarkAsFailed("Finance service integration failed");
+                // بازگشت پول به کیف پول در صورت شکست
+                account.Balance.ReleaseFromPendingToAvailable(payout.Amount);
             }
 
             await _unitOfWork.SaveChangesAsync();

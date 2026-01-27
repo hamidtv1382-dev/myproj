@@ -12,7 +12,7 @@ using Seller_Finance_Service.src._03_Infrastructure.Data;
 namespace Seller_Finance_Service.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260125155402_init")]
+    [Migration("20260127150635_init")]
     partial class init
     {
         /// <inheritdoc />
@@ -31,16 +31,8 @@ namespace Seller_Finance_Service.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<decimal>("AvailableBalanceAmount")
-                        .HasPrecision(18)
-                        .HasColumnType("decimal(18,0)");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
-
-                    b.Property<decimal>("HoldBalanceAmount")
-                        .HasPrecision(18)
-                        .HasColumnType("decimal(18,0)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
@@ -49,10 +41,6 @@ namespace Seller_Finance_Service.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
-
-                    b.Property<decimal>("PendingBalanceAmount")
-                        .HasPrecision(18)
-                        .HasColumnType("decimal(18,0)");
 
                     b.Property<Guid>("SellerId")
                         .HasColumnType("uniqueidentifier");
@@ -175,7 +163,7 @@ namespace Seller_Finance_Service.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<decimal>("Amount_Value")
+                    b.Property<decimal>("Amount")
                         .HasPrecision(18)
                         .HasColumnType("decimal(18,0)")
                         .HasColumnName("Amount");
@@ -256,6 +244,94 @@ namespace Seller_Finance_Service.Migrations
                                 .HasForeignKey("SellerAccountId");
                         });
 
+                    b.OwnsOne("Seller_Finance_Service.src._01_Domain.Core.Entities.SellerBalance", "Balance", b1 =>
+                        {
+                            b1.Property<Guid>("SellerAccountId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.HasKey("SellerAccountId");
+
+                            b1.ToTable("SellerAccounts");
+
+                            b1.WithOwner()
+                                .HasForeignKey("SellerAccountId");
+
+                            b1.OwnsOne("Seller_Finance_Service.src._01_Domain.Core.ValueObjects.Money", "AvailableBalance", b2 =>
+                                {
+                                    b2.Property<Guid>("SellerBalanceSellerAccountId")
+                                        .HasColumnType("uniqueidentifier");
+
+                                    b2.Property<decimal>("Amount")
+                                        .HasPrecision(18)
+                                        .HasColumnType("decimal(18,0)")
+                                        .HasColumnName("AvailableBalanceAmount");
+
+                                    b2.Property<string>("Currency")
+                                        .IsRequired()
+                                        .HasColumnType("nvarchar(max)");
+
+                                    b2.HasKey("SellerBalanceSellerAccountId");
+
+                                    b2.ToTable("SellerAccounts");
+
+                                    b2.WithOwner()
+                                        .HasForeignKey("SellerBalanceSellerAccountId");
+                                });
+
+                            b1.OwnsOne("Seller_Finance_Service.src._01_Domain.Core.ValueObjects.Money", "HoldBalance", b2 =>
+                                {
+                                    b2.Property<Guid>("SellerBalanceSellerAccountId")
+                                        .HasColumnType("uniqueidentifier");
+
+                                    b2.Property<decimal>("Amount")
+                                        .HasPrecision(18)
+                                        .HasColumnType("decimal(18,0)")
+                                        .HasColumnName("HoldBalanceAmount");
+
+                                    b2.Property<string>("Currency")
+                                        .IsRequired()
+                                        .HasColumnType("nvarchar(max)");
+
+                                    b2.HasKey("SellerBalanceSellerAccountId");
+
+                                    b2.ToTable("SellerAccounts");
+
+                                    b2.WithOwner()
+                                        .HasForeignKey("SellerBalanceSellerAccountId");
+                                });
+
+                            b1.OwnsOne("Seller_Finance_Service.src._01_Domain.Core.ValueObjects.Money", "PendingBalance", b2 =>
+                                {
+                                    b2.Property<Guid>("SellerBalanceSellerAccountId")
+                                        .HasColumnType("uniqueidentifier");
+
+                                    b2.Property<decimal>("Amount")
+                                        .HasPrecision(18)
+                                        .HasColumnType("decimal(18,0)")
+                                        .HasColumnName("PendingBalanceAmount");
+
+                                    b2.Property<string>("Currency")
+                                        .IsRequired()
+                                        .HasColumnType("nvarchar(max)");
+
+                                    b2.HasKey("SellerBalanceSellerAccountId");
+
+                                    b2.ToTable("SellerAccounts");
+
+                                    b2.WithOwner()
+                                        .HasForeignKey("SellerBalanceSellerAccountId");
+                                });
+
+                            b1.Navigation("AvailableBalance")
+                                .IsRequired();
+
+                            b1.Navigation("HoldBalance")
+                                .IsRequired();
+
+                            b1.Navigation("PendingBalance")
+                                .IsRequired();
+                        });
+
                     b.OwnsOne("Seller_Finance_Service.src._01_Domain.Core.ValueObjects.BankAccountInfo", "BankAccount", b1 =>
                         {
                             b1.Property<Guid>("SellerAccountId")
@@ -294,6 +370,9 @@ namespace Seller_Finance_Service.Migrations
                         });
 
                     b.Navigation("AuditInfo")
+                        .IsRequired();
+
+                    b.Navigation("Balance")
                         .IsRequired();
 
                     b.Navigation("BankAccount")

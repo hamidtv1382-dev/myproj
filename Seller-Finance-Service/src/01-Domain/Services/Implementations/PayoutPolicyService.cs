@@ -13,7 +13,7 @@ namespace Seller_Finance_Service.src._01_Domain.Services.Implementations
             if (account.Balance.AvailableBalance.Amount < requestedAmount.Amount) return false;
 
             // Policy 2: Minimum payout amount (e.g., 100,000 IRR)
-            if (requestedAmount.Amount < 100000) return false;
+            if (requestedAmount.Amount < 10000) return false;
 
             return true;
         }
