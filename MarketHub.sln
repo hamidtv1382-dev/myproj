@@ -43,6 +43,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Wallet-Service", "Wallet-Se
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Notification-Services", "Notification-Services\Notification-Services.csproj", "{8C2C83B1-CBFE-45CC-B773-4BB45365917B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Media-Service", "Media-Service\Media-Service.csproj", "{67C040AF-FECB-4529-8817-E37DC50CA373}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -109,6 +111,10 @@ Global
 		{8C2C83B1-CBFE-45CC-B773-4BB45365917B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8C2C83B1-CBFE-45CC-B773-4BB45365917B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8C2C83B1-CBFE-45CC-B773-4BB45365917B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{67C040AF-FECB-4529-8817-E37DC50CA373}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{67C040AF-FECB-4529-8817-E37DC50CA373}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{67C040AF-FECB-4529-8817-E37DC50CA373}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{67C040AF-FECB-4529-8817-E37DC50CA373}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -133,6 +139,7 @@ Global
 		{1C089D30-237C-4C81-BEA2-86B2351662D1} = {CF275DC5-14D4-4704-8C23-220399D2B411}
 		{39308D9B-710F-416A-8D2B-E281F99C66D3} = {CF275DC5-14D4-4704-8C23-220399D2B411}
 		{8C2C83B1-CBFE-45CC-B773-4BB45365917B} = {CF275DC5-14D4-4704-8C23-220399D2B411}
+		{67C040AF-FECB-4529-8817-E37DC50CA373} = {CF275DC5-14D4-4704-8C23-220399D2B411}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {CE5E4472-A596-4661-BE80-EABC1C5B637C}
