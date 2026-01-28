@@ -6,9 +6,9 @@ namespace Notification_Services.src._04_Api.Middlewares
     {
         private readonly RequestDelegate _next;
 
-        public LoggingMiddleware(RequestDelegate _next)
+        public LoggingMiddleware(RequestDelegate next) // پارامتر متفاوت باشد
         {
-            _next = _next;
+            _next = next; // حالا فیلد کلاس ست می‌شود
         }
 
         public async Task InvokeAsync(HttpContext context)
@@ -17,11 +17,12 @@ namespace Notification_Services.src._04_Api.Middlewares
 
             Console.WriteLine($"[Request] {context.Request.Method} {context.Request.Path}");
 
-            await _next(context);
+            await _next(context); // حالا دیگر null نیست
 
             watch.Stop();
 
             Console.WriteLine($"[Response] {context.Request.Method} {context.Request.Path} responded {context.Response.StatusCode} in {watch.ElapsedMilliseconds}ms");
         }
     }
+
 }

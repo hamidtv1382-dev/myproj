@@ -20,7 +20,10 @@ namespace Payment_Service.src._04_Api.Extensions
             services.AddDbContext<AppDbContext>(options =>
                 options.UseSqlServer(configuration.GetConnectionString("DefaultConnection")));
 
-            // Mapping Profile - Register explicitly (Missing in previous version)
+            // HttpContextAccessor (برای خواندن توکن در OrderServiceClient)
+            services.AddHttpContextAccessor();
+
+            // Mapping Profile
             services.AddScoped<PaymentMappingProfile>();
 
             // Unit of Work
@@ -34,9 +37,22 @@ namespace Payment_Service.src._04_Api.Extensions
             services.AddScoped<IPaymentDomainService, PaymentDomainService>();
             services.AddScoped<IRefundDomainService, RefundDomainService>();
 
-            // Infrastructure Services
+            // Infrastructure Services (External Clients)
             services.AddScoped<IPaymentGateway, PaymentGatewayClient>();
+            services.AddScoped<IWalletServiceClient, WalletServiceClient>();
+            services.AddScoped<IOrderServiceClient, OrderServiceClient>();
             services.AddSingleton<ICacheService, RedisCacheService>();
+
+            // Register HttpClients with Base Addresses
+            services.AddHttpClient<WalletServiceClient>(client =>
+            {
+                client.BaseAddress = new Uri(configuration["ExternalServices:WalletService"] ?? "http://localhost:5004/api");
+            });
+
+            services.AddHttpClient<OrderServiceClient>(client =>
+            {
+                client.BaseAddress = new Uri(configuration["ExternalServices:OrderService"] ?? "http://localhost:5288/api");
+            });
 
             // CORS
             services.AddCors(options =>

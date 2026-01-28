@@ -20,7 +20,7 @@ namespace Order_Service.src._03_Infrastructure.Services.External
         public async Task<PaymentResultDto?> ProcessPaymentAsync(PaymentRequestDto request)
         {
             var response = await _retryPolicy.ExecuteAsync(() =>
-                _httpClient.PostAsJsonAsync("/api/v1/payments/process", request));
+                _httpClient.PostAsJsonAsync("https://localhost:7116/api/Payments", request));
 
             if (!response.IsSuccessStatusCode) return null;
 
@@ -30,7 +30,7 @@ namespace Order_Service.src._03_Infrastructure.Services.External
         public async Task<RefundResultDto?> ProcessRefundAsync(RefundRequestDto request)
         {
             var response = await _retryPolicy.ExecuteAsync(() =>
-                _httpClient.PostAsJsonAsync("/api/v1/payments/refund", request));
+                _httpClient.PostAsJsonAsync("https://localhost:7116/api/Refunds", request));
 
             if (!response.IsSuccessStatusCode) return null;
 
@@ -38,7 +38,7 @@ namespace Order_Service.src._03_Infrastructure.Services.External
         }
     }
 
-    public record PaymentRequestDto(Guid OrderId, decimal Amount, string CallbackUrl, string CardNumber, string Cvv2, string ExpMonth, string ExpYear, string Pin);
+    public record PaymentRequestDto(Guid OrderId, decimal Amount, string CallbackUrl);
     public record PaymentResultDto(Guid TransactionId, bool IsSuccessful, string? Message);
     public record RefundRequestDto(Guid PaymentId, decimal Amount);
     public record RefundResultDto(Guid RefundId, bool IsSuccessful, string? Message);

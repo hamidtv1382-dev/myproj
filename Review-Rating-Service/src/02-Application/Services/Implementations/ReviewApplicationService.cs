@@ -27,36 +27,47 @@ namespace Review_Rating_Service.src._02_Application.Services.Implementations
             _notificationService = notificationService;
         }
 
-        public async Task<ReviewResponseDto> CreateReviewAsync(CreateReviewRequestDto request)
+        public async Task<ReviewResponseDto> CreateReviewAsync(CreateReviewRequestDto request, Guid userId)
         {
-            // Check if user can review (Domain Logic)
-            var canReview = await _reviewDomainService.CanUserReviewAsync(request.UserId, request.ProductId);
-            if (!canReview)
-            {
+            if (!await _reviewDomainService.CanUserReviewAsync(userId, request.ProductId))
                 throw new ReviewCreationFailedException("User has already reviewed this product.");
+
+            var review = new Review(request.ProductId, userId, new ReviewerName(request.ReviewerName), new ReviewText(request.Text));
+
+            // Ratings
+            if (request.Ratings != null)
+            {
+                foreach (var r in request.Ratings)
+                {
+                    var rating = new Rating(r.Type, new RatingValue(r.Value))
+                    {
+                        Review = review
+                    };
+                    review.AddRating(rating);
+                }
             }
 
-            var reviewText = new ReviewText(request.Text);
-            var reviewerName = new ReviewerName(request.ReviewerName);
-
-            var review = new Review(request.ProductId, request.UserId, reviewerName, reviewText);
-
-            // Add Ratings
-            foreach (var ratingDto in request.Ratings)
+            // Attachments
+            if (request.Attachments != null)
             {
-                var ratingValue = new RatingValue(ratingDto.Value);
-                var rating = new Rating(ratingDto.Type, ratingValue);
-                review.AddRating(rating);
+                foreach (var a in request.Attachments)
+                {
+                    var attachment = new ReviewAttachment(a.Url, a.Type)
+                    {
+                        Review = review
+                    };
+                    review.AddAttachment(attachment);
+                }
             }
 
             await _unitOfWork.Reviews.AddAsync(review);
             await _unitOfWork.SaveChangesAsync();
 
-            // Trigger Notifications
             await _notificationService.NotifySellerOnReviewCreatedAsync(review.ProductId, review.Text);
 
             return _mapper.Map<ReviewResponseDto>(review);
         }
+
 
         public async Task<ReviewResponseDto> UpdateReviewAsync(UpdateReviewRequestDto request)
         {
@@ -127,7 +138,7 @@ namespace Review_Rating_Service.src._02_Application.Services.Implementations
             };
         }
 
-        public async Task<ReviewSummaryResponseDto> GetProductSummaryAsync(Guid productId)
+        public async Task<ReviewSummaryResponseDto> GetProductSummaryAsync(int productId)
         {
             var reviews = (await _unitOfWork.Reviews.GetByProductIdAsync(productId)).Where(r => r.Status == ReviewStatus.Approved).ToList();
 

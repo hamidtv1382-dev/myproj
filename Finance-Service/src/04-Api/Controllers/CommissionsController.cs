@@ -9,12 +9,12 @@ namespace Finance_Service.src._04_Api.Controllers
     [Route("api/[controller]")]
     public class CommissionsController : ControllerBase
     {
-        private readonly ICommissionApplicationService _commissionService;
+        private readonly IFinanceApplicationService _financeService;
         private readonly ILogger<CommissionsController> _logger;
 
-        public CommissionsController(ICommissionApplicationService commissionService, ILogger<CommissionsController> logger)
+        public CommissionsController(IFinanceApplicationService financeService, ILogger<CommissionsController> logger)
         {
-            _commissionService = commissionService;
+            _financeService = financeService;
             _logger = logger;
         }
 
@@ -23,7 +23,7 @@ namespace Finance_Service.src._04_Api.Controllers
         {
             try
             {
-                var result = await _commissionService.ProcessCommissionAsync(request);
+                var result = await _financeService.ProcessCommissionAsync(request);
                 return CreatedAtAction(nameof(GetCommissionById), new { id = result.Id }, result);
             }
             catch (Exception ex)
@@ -38,7 +38,7 @@ namespace Finance_Service.src._04_Api.Controllers
         {
             try
             {
-                var result = await _commissionService.GetCommissionByIdAsync(id);
+                var result = await _financeService.GetCommissionByIdAsync(id);
                 return Ok(result);
             }
             catch (Exception ex)
@@ -53,7 +53,7 @@ namespace Finance_Service.src._04_Api.Controllers
         {
             try
             {
-                var result = await _commissionService.GetCommissionsBySellerIdAsync(sellerId);
+                var result = await _financeService.GetCommissionsBySellerIdAsync(sellerId);
                 return Ok(result);
             }
             catch (Exception ex)

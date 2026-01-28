@@ -7,6 +7,7 @@ using Order_Service.src._02_Application.DTOs.Requests;
 using Order_Service.src._02_Application.DTOs.Responses;
 using Order_Service.src._02_Application.Exceptions;
 using Order_Service.src._02_Application.Services.Interfaces;
+using Order_Service.src._03_Infrastructure.Services.External;
 
 namespace Order_Service.src._02_Application.Services.Implementations
 {
@@ -17,19 +18,28 @@ namespace Order_Service.src._02_Application.Services.Implementations
         private readonly IInventoryService _inventoryService;
         private readonly IMapper _mapper;
         private readonly ILogger<OrderApplicationService> _logger;
+        private readonly PaymentServiceClient _paymentServiceClient;
+        private readonly CatalogServiceClient _catalogClient;
+        private readonly SellerFinanceServiceClient _sellerFinanceClient;
 
         public OrderApplicationService(
             IUnitOfWork unitOfWork,
             IOrderDomainService orderDomainService,
             IInventoryService inventoryService,
             IMapper mapper,
-            ILogger<OrderApplicationService> logger)
+            ILogger<OrderApplicationService> logger,
+            PaymentServiceClient paymentServiceClient,
+            CatalogServiceClient catalogClient,
+            SellerFinanceServiceClient sellerFinanceClient)
         {
             _unitOfWork = unitOfWork;
             _orderDomainService = orderDomainService;
             _inventoryService = inventoryService;
             _mapper = mapper;
             _logger = logger;
+            _paymentServiceClient = paymentServiceClient;
+            _catalogClient = catalogClient;
+            _sellerFinanceClient = sellerFinanceClient;
         }
 
         public async Task<OrderDetailResponseDto> CreateOrderAsync(Guid buyerId, CreateOrderRequestDto request)
@@ -54,14 +64,18 @@ namespace Order_Service.src._02_Application.Services.Implementations
             var orderItems = new List<OrderItem>();
             foreach (var basketItem in basket.Items)
             {
+                var productInfo = await _catalogClient.GetProductByIdAsync(basketItem.ProductId);
+                if (productInfo == null) throw new KeyNotFoundException($"Product {basketItem.ProductId} not found.");
+
                 orderItems.Add(new OrderItem(
                     Guid.NewGuid(),
-                    Guid.NewGuid(),
+                    Guid.NewGuid(), // Placeholder, will be set by Order
                     basketItem.ProductId,
                     basketItem.ProductName,
                     basketItem.ImageUrl,
                     basketItem.UnitPrice,
-                    basketItem.Quantity
+                    basketItem.Quantity,
+                    productInfo.SellerId
                 ));
             }
 
@@ -86,14 +100,68 @@ namespace Order_Service.src._02_Application.Services.Implementations
 
             await _unitOfWork.SaveChangesAsync();
 
+            try
+            {
+                var callbackUrl = $"https://localhost:5001/api/payments/verify/{order.Id}";
+
+                var paymentRequest = new PaymentRequestDto(
+                    OrderId: order.Id,
+                    Amount: order.FinalAmount.Value,
+                    CallbackUrl: callbackUrl
+                );
+
+                var paymentResult = await _paymentServiceClient.ProcessPaymentAsync(paymentRequest);
+
+                if (paymentResult == null || !paymentResult.IsSuccessful)
+                {
+                    _orderDomainService.CancelOrder(order, "Payment Failed");
+                    foreach (var item in order.Items) await _inventoryService.ReleaseStockAsync(item.ProductId, item.Quantity);
+                    await _unitOfWork.SaveChangesAsync();
+                }
+                else
+                {
+                    // --- تغییر جدید: آپدیت وضعیت سفارش و ثبت درآمد ---
+                    order.Confirm(); // تغییر وضعیت به Confirmed
+                    await _unitOfWork.SaveChangesAsync(); // ذخیره تغییر وضعیت
+
+                    await ProcessSellerEarningsAsync(order); // ثبت درآمد فروشنده
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Payment integration failed for Order {OrderId}", order.Id);
+            }
+
             return _mapper.Map<OrderDetailResponseDto>(order);
+        }
+
+        private async Task ProcessSellerEarningsAsync(Order order)
+        {
+            try
+            {
+                foreach (var item in order.Items)
+                {
+                    var itemAmount = item.TotalPrice.Value;
+                    var transactionId = Guid.NewGuid();
+
+                    await _sellerFinanceClient.RecordSellerEarningAsync(
+                        sellerId: Guid.Parse(item.SellerId),
+                        orderId: order.Id,
+                        amount: itemAmount,
+                        transactionId: transactionId
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to record seller earnings for Order {OrderId}", order.Id);
+            }
         }
 
         public async Task<OrderDetailResponseDto> GetOrderByIdAsync(Guid orderId)
         {
             var order = await _unitOfWork.Orders.GetByIdAsync(orderId);
-            if (order == null)
-                throw new OrderNotFoundException(orderId);
+            if (order == null) throw new OrderNotFoundException(orderId);
 
             return _mapper.Map<OrderDetailResponseDto>(order);
         }
@@ -107,8 +175,7 @@ namespace Order_Service.src._02_Application.Services.Implementations
         public async Task<OrderDetailResponseDto> UpdateOrderAsync(UpdateOrderRequestDto request)
         {
             var order = await _unitOfWork.Orders.GetByIdAsync(request.OrderId);
-            if (order == null)
-                throw new OrderNotFoundException(request.OrderId);
+            if (order == null) throw new OrderNotFoundException(request.OrderId);
 
             var newAddress = new ShippingAddress(
                 request.FirstName,
@@ -134,8 +201,7 @@ namespace Order_Service.src._02_Application.Services.Implementations
         public async Task<OrderDetailResponseDto> CancelOrderAsync(CancelOrderRequestDto request)
         {
             var order = await _unitOfWork.Orders.GetByIdAsync(request.OrderId);
-            if (order == null)
-                throw new OrderNotFoundException(request.OrderId);
+            if (order == null) throw new OrderNotFoundException(request.OrderId);
 
             _orderDomainService.CancelOrder(order, request.Reason ?? "User requested cancellation");
 
@@ -153,16 +219,14 @@ namespace Order_Service.src._02_Application.Services.Implementations
         public async Task<TrackOrderResponseDto> TrackOrderAsync(TrackOrderRequestDto request)
         {
             var order = await _unitOfWork.Orders.GetByIdAsync(request.OrderId);
-            if (order == null)
-                throw new OrderNotFoundException(request.OrderId);
+            if (order == null) throw new OrderNotFoundException(request.OrderId);
 
-            // Mock timeline logic based on status and dates
             var response = new TrackOrderResponseDto
             {
                 OrderId = order.Id,
                 OrderNumber = order.OrderNumber.Value,
                 CurrentStatus = order.Status.ToString(),
-                EstimatedDeliveryDate = DateTime.UtcNow.AddDays(5), // Fixed type issue
+                EstimatedDeliveryDate = DateTime.UtcNow.AddDays(5),
                 History = new List<TrackOrderResponseDto.OrderTimelineDto>
                 {
                     new TrackOrderResponseDto.OrderTimelineDto { Status = "Pending", Date = order.CreatedAt },

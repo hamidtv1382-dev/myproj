@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Mvc;
 using Order_Service.src._02_Application.DTOs.Requests;
 using Order_Service.src._02_Application.DTOs.Responses;
 using Order_Service.src._02_Application.Services.Interfaces;
-using System.Security.Claims;
 
 namespace Order_Service.src._04_Api.Controllers
 {
@@ -20,7 +19,7 @@ namespace Order_Service.src._04_Api.Controllers
             _basketService = basketService;
             _logger = logger;
         }
-       
+
 
         private Guid GetUserId()
         {

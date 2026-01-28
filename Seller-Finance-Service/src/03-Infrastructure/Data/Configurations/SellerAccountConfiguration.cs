@@ -16,24 +16,25 @@ namespace Seller_Finance_Service.src._03_Infrastructure.Data.Configurations
             // SellerBalance Mapping (Nested Flattened)
             builder.OwnsOne(s => s.Balance, balance =>
             {
-                // هندل کردن AvailableBalance (نوع Money)
+                // Available Balance
                 balance.OwnsOne(b => b.AvailableBalance, money =>
                 {
-                    money.Property(m => m.Amount).HasColumnName("AvailableBalanceAmount").HasPrecision(18, 0);
-                    // Currency معمولا ثابت است یا در ستون جدا ذخیره نمی‌شود مگر اینکه نیاز باشد
-                    // money.Property(m => m.Currency).HasColumnName("CurrencyCode"); 
+                    money.Property(m => m.Amount).HasColumnName("AvailableBalanceAmount").HasPrecision(18, 0).IsRequired();
+                    money.Property(m => m.Currency).HasColumnName("CurrencyCode").HasMaxLength(3).HasDefaultValue("IRR");
                 });
 
-                // هندل کردن PendingBalance (نوع Money)
+                // Pending Balance
                 balance.OwnsOne(b => b.PendingBalance, money =>
                 {
-                    money.Property(m => m.Amount).HasColumnName("PendingBalanceAmount").HasPrecision(18, 0);
+                    money.Property(m => m.Amount).HasColumnName("PendingBalanceAmount").HasPrecision(18, 0).IsRequired();
+                    money.Property(m => m.Currency).HasColumnName("CurrencyCode").HasMaxLength(3).HasDefaultValue("IRR");
                 });
 
-                // هندل کردن HoldBalance (نوع Money)
+                // Hold Balance
                 balance.OwnsOne(b => b.HoldBalance, money =>
                 {
-                    money.Property(m => m.Amount).HasColumnName("HoldBalanceAmount").HasPrecision(18, 0);
+                    money.Property(m => m.Amount).HasColumnName("HoldBalanceAmount").HasPrecision(18, 0).IsRequired();
+                    money.Property(m => m.Currency).HasColumnName("CurrencyCode").HasMaxLength(3).HasDefaultValue("IRR");
                 });
             });
 

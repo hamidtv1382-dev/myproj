@@ -9,9 +9,7 @@ namespace Notification_Services.src._03_Infrastructure.Data.Configurations
         public void Configure(EntityTypeBuilder<NotificationAttachment> builder)
         {
             builder.ToTable("NotificationAttachments");
-
             builder.HasKey(a => a.Id);
-
             builder.Property<Guid>("NotificationId").IsRequired();
 
             builder.Property(a => a.FileName).HasMaxLength(255).IsRequired();
@@ -19,7 +17,7 @@ namespace Notification_Services.src._03_Infrastructure.Data.Configurations
             builder.Property(a => a.FileSizeBytes).IsRequired();
 
             builder.HasOne<Notification>()
-                .WithMany()
+                .WithMany(n => n.Attachments)
                 .HasForeignKey("NotificationId")
                 .OnDelete(DeleteBehavior.Cascade);
         }

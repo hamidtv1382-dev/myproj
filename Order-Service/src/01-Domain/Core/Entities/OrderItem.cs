@@ -12,11 +12,12 @@ namespace Order_Service.src._01_Domain.Core.Entities
         public string? ImageUrl { get; private set; }
         public Money UnitPrice { get; private set; }
         public int Quantity { get; private set; }
+        public string SellerId { get; private set; }
         public Money TotalPrice => UnitPrice * Quantity;
 
         protected OrderItem() { }
 
-        public OrderItem(Guid id, Guid orderId, int productId, string productName, string? imageUrl, Money unitPrice, int quantity)
+        public OrderItem(Guid id, Guid orderId, int productId, string productName, string? imageUrl, Money unitPrice, int quantity, string sellerId)
         {
             Id = id;
             OrderId = orderId;
@@ -24,6 +25,7 @@ namespace Order_Service.src._01_Domain.Core.Entities
             ProductName = productName;
             ImageUrl = imageUrl;
             UnitPrice = unitPrice;
+            SellerId = sellerId;
             SetQuantity(quantity);
         }
 

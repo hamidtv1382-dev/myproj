@@ -16,7 +16,7 @@ namespace Order_Service.src._03_Infrastructure.Data.Configurations
             builder.Property(oi => oi.ProductId).IsRequired();
             builder.Property(oi => oi.ProductName).IsRequired().HasMaxLength(250);
             builder.Property(oi => oi.ImageUrl).HasMaxLength(500);
-
+            builder.Property(oi => oi.SellerId).IsRequired().HasMaxLength(450);
             builder.Property(oi => oi.Quantity).IsRequired();
 
             builder.Ignore(oi => oi.TotalPrice);

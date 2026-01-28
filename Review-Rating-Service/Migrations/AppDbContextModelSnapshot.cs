@@ -63,8 +63,8 @@ namespace Review_Rating_Service.Migrations
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
 
-                    b.Property<Guid>("ProductId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<int>("ProductId")
+                        .HasColumnType("int");
 
                     b.Property<int>("Status")
                         .HasColumnType("int");
@@ -147,15 +147,17 @@ namespace Review_Rating_Service.Migrations
 
             modelBuilder.Entity("Review_Rating_Service.src._01_Domain.Core.Aggregates.Review.Rating", b =>
                 {
-                    b.HasOne("Review_Rating_Service.src._01_Domain.Core.Aggregates.Review.Review", null)
+                    b.HasOne("Review_Rating_Service.src._01_Domain.Core.Aggregates.Review.Review", "Review")
                         .WithMany()
                         .HasForeignKey("ReviewId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("Review_Rating_Service.src._01_Domain.Core.Aggregates.Review.Review", null)
                         .WithMany("Ratings")
                         .HasForeignKey("ReviewId1");
+
+                    b.Navigation("Review");
                 });
 
             modelBuilder.Entity("Review_Rating_Service.src._01_Domain.Core.Aggregates.Review.Review", b =>
@@ -205,15 +207,17 @@ namespace Review_Rating_Service.Migrations
 
             modelBuilder.Entity("Review_Rating_Service.src._01_Domain.Core.Aggregates.Review.ReviewAttachment", b =>
                 {
-                    b.HasOne("Review_Rating_Service.src._01_Domain.Core.Aggregates.Review.Review", null)
+                    b.HasOne("Review_Rating_Service.src._01_Domain.Core.Aggregates.Review.Review", "Review")
                         .WithMany()
                         .HasForeignKey("ReviewId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("Review_Rating_Service.src._01_Domain.Core.Aggregates.Review.Review", null)
                         .WithMany("Attachments")
                         .HasForeignKey("ReviewId1");
+
+                    b.Navigation("Review");
                 });
 
             modelBuilder.Entity("Review_Rating_Service.src._01_Domain.Core.Aggregates.Review.ReviewComment", b =>

@@ -31,41 +31,43 @@ namespace Notification_Services.src._02_Application.Services.Implementations
 
         public async Task<NotificationResponseDto> CreateNotificationAsync(CreateNotificationRequestDto request)
         {
+            // 1️⃣ اعتبارسنجی
             _domainService.ValidateNotificationContent(request.Title, request.Message);
 
-            var title = new NotificationTitle(request.Title);
-            var message = new NotificationMessage(request.Message);
-            var notification = new Notification(request.Type, title, message);
+            // 2️⃣ ساخت Notification اصلی
+            var notification = new Notification(
+                request.Type,
+                new NotificationTitle(request.Title),
+                new NotificationMessage(request.Message)
+            );
 
-            // Add Recipients
+            // 3️⃣ افزودن Recipients به Aggregate
             foreach (var recipientDto in request.Recipients)
             {
-                var contact = new RecipientContact(recipientDto.Contact);
-                var recipient = new NotificationRecipient(recipientDto.Type, contact);
-                notification.AddRecipient(recipient);
+                var recipient = new NotificationRecipient(
+                    recipientDto.Type,
+                    new RecipientContact(recipientDto.Contact)
+                );
+
+                notification.AddRecipient(recipient); // فقط به Aggregate اضافه می‌کنیم
             }
 
-            // Add Attachments
+            // 4️⃣ افزودن Attachments به Aggregate
             foreach (var url in request.AttachmentUrls)
             {
-                // Assuming filename is extracted or passed
                 var attachment = new NotificationAttachment("attachment", url, 0);
                 notification.AddAttachment(attachment);
             }
 
-            // Set Schedule if provided
-            if (request.ScheduledAt.HasValue)
-            {
-                notification.Schedule(request.ScheduledAt.Value);
-            }
-
-            // Try to apply template if logic allows, currently skipped for simplicity
-
+            // 5️⃣ Add Notification به Repository
             await _unitOfWork.Notifications.AddAsync(notification);
+
+            // 6️⃣ Save نهایی: EF Core با Cascade همه Recipients و Attachments را Insert می‌کند
             await _unitOfWork.SaveChangesAsync();
 
             return _mapper.Map<NotificationResponseDto>(notification);
         }
+
 
         public async Task<NotificationResponseDto> GetNotificationAsync(Guid id)
         {

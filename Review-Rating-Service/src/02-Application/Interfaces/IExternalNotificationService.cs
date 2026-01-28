@@ -2,7 +2,7 @@
 {
     public interface IExternalNotificationService
     {
-        Task NotifySellerOnReviewCreatedAsync(Guid productId, string reviewText);
+        Task NotifySellerOnReviewCreatedAsync(int productId, string reviewText);
         Task NotifyAdminOnPendingReviewAsync(Guid reviewId);
     }
 }

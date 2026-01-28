@@ -26,35 +26,20 @@ namespace Notification_Services.src._01_Domain.Core.Aggregates.Notification
 
         public Notification(NotificationType type, NotificationTitle title, NotificationMessage message)
         {
-            Id = Guid.NewGuid();
             Type = type;
             Status = NotificationStatus.Pending;
             Title = title.Value;
             Message = message.Value;
-
             AddDomainEvent(new NotificationCreatedEvent(Id, Guid.Empty));
         }
 
-        public void SetTemplate(Guid templateId)
-        {
-            TemplateId = templateId;
-        }
-
-        public void AddRecipient(NotificationRecipient recipient)
-        {
-            _recipients.Add(recipient);
-        }
-
-        public void AddAttachment(NotificationAttachment attachment)
-        {
-            _attachments.Add(attachment);
-        }
+        public void SetTemplate(Guid templateId) => TemplateId = templateId;
+        public void AddRecipient(NotificationRecipient recipient) => _recipients.Add(recipient);
+        public void AddAttachment(NotificationAttachment attachment) => _attachments.Add(attachment);
 
         public void Schedule(DateTime scheduledAt)
         {
-            if (scheduledAt < DateTime.UtcNow)
-                throw new ArgumentException("Scheduled time must be in the future.");
-
+            if (scheduledAt < DateTime.UtcNow) throw new ArgumentException("Scheduled time must be in the future.");
             ScheduledAt = scheduledAt;
         }
 

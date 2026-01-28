@@ -62,5 +62,26 @@ namespace Wallet_Service.src._04_Api.Controllers
                 return BadRequest(ex.Message);
             }
         }
+
+        [HttpPost("{userId}/deduct")]
+        public async Task<ActionResult<WalletTransactionResponseDto>> DeductFundsByUserId(Guid userId, [FromBody] DeductFundsByUserIdRequestDto request)
+        {
+            try
+            {
+                // برای اطمینان از اینکه UserId در URL با UserId در Body یکی است
+                if (userId != request.UserId)
+                {
+                    return BadRequest("UserId mismatch.");
+                }
+
+                var result = await _walletService.DeductFundsByUserIdAsync(request);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deducting funds by UserId");
+                return BadRequest(ex.Message);
+            }
+        }
     }
 }

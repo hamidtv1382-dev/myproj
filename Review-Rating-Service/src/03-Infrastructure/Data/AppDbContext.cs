@@ -15,6 +15,8 @@ namespace Review_Rating_Service.src._03_Infrastructure.Data
         {
             base.OnModelCreating(modelBuilder);
             modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
+
+          
         }
     }
 }

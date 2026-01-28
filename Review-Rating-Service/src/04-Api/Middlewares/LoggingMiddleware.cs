@@ -6,9 +6,9 @@ namespace Review_Rating_Service.src._04_Api.Middlewares
     {
         private readonly RequestDelegate _next;
 
-        public LoggingMiddleware(RequestDelegate _next)
+        public LoggingMiddleware(RequestDelegate next)
         {
-            _next = _next;
+            _next = next;
         }
 
         public async Task InvokeAsync(HttpContext context)
@@ -24,4 +24,5 @@ namespace Review_Rating_Service.src._04_Api.Middlewares
             Console.WriteLine($"[Response] {context.Request.Method} {context.Request.Path} responded {context.Response.StatusCode} in {watch.ElapsedMilliseconds}ms");
         }
     }
+
 }

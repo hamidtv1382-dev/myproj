@@ -26,7 +26,8 @@ namespace Notification_Services.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("newid()");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -95,14 +96,9 @@ namespace Notification_Services.Migrations
                     b.Property<Guid>("NotificationId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid?>("NotificationId1")
-                        .HasColumnType("uniqueidentifier");
-
                     b.HasKey("Id");
 
                     b.HasIndex("NotificationId");
-
-                    b.HasIndex("NotificationId1");
 
                     b.ToTable("NotificationAttachments", (string)null);
                 });
@@ -124,17 +120,12 @@ namespace Notification_Services.Migrations
                     b.Property<Guid>("NotificationId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid?>("NotificationId1")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<int>("Type")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
 
                     b.HasIndex("NotificationId");
-
-                    b.HasIndex("NotificationId1");
 
                     b.ToTable("NotificationRecipients", (string)null);
                 });
@@ -186,27 +177,19 @@ namespace Notification_Services.Migrations
             modelBuilder.Entity("Notification_Services.src._01_Domain.Core.Aggregates.Notification.NotificationAttachment", b =>
                 {
                     b.HasOne("Notification_Services.src._01_Domain.Core.Aggregates.Notification.Notification", null)
-                        .WithMany()
+                        .WithMany("Attachments")
                         .HasForeignKey("NotificationId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.HasOne("Notification_Services.src._01_Domain.Core.Aggregates.Notification.Notification", null)
-                        .WithMany("Attachments")
-                        .HasForeignKey("NotificationId1");
                 });
 
             modelBuilder.Entity("Notification_Services.src._01_Domain.Core.Aggregates.Notification.NotificationRecipient", b =>
                 {
                     b.HasOne("Notification_Services.src._01_Domain.Core.Aggregates.Notification.Notification", null)
-                        .WithMany()
+                        .WithMany("Recipients")
                         .HasForeignKey("NotificationId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.HasOne("Notification_Services.src._01_Domain.Core.Aggregates.Notification.Notification", null)
-                        .WithMany("Recipients")
-                        .HasForeignKey("NotificationId1");
                 });
 
             modelBuilder.Entity("Notification_Services.src._01_Domain.Core.Aggregates.Notification.Notification", b =>

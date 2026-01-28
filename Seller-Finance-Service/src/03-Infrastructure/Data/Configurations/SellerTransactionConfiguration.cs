@@ -1,7 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Seller_Finance_Service.src._01_Domain.Core.Entities;
-using Seller_Finance_Service.src._01_Domain.Core.ValueObjects;
+using Seller_Finance_Service.src._03_Infrastructure.Data; // مسیر صحیح را چک کنید
 
 namespace Seller_Finance_Service.src._03_Infrastructure.Data.Configurations
 {
@@ -13,20 +13,12 @@ namespace Seller_Finance_Service.src._03_Infrastructure.Data.Configurations
             builder.HasKey(t => t.Id);
             builder.Property(t => t.SellerAccountId).IsRequired();
 
-            // --- UPDATED SECTION ---
-            // حذف: builder.Ignore(t => t.Amount);
-            // حذف: builder.Property<decimal>("Amount_Value")...
-
-            // تعریف نگاشت برای تبدیل دیتابیس (decimal) به آبجکت (Money)
-            builder.Property(t => t.Amount)
-                .HasConversion(
-                    v => v.Amount, // به دیتابیس بنویس: مقدار Amount
-                    v => new Money(v, "IRR") // از دیتابیس بخوان: نمونه جدید Money بساز
-                )
-                .HasColumnName("Amount")
-                .HasPrecision(18, 0)
-                .IsRequired();
-            // -----------------------
+            // اصلاح شده برای هماهنگی با Money
+            builder.OwnsOne(t => t.Amount, money =>
+            {
+                money.Property(m => m.Amount).HasColumnName("Amount").HasPrecision(18, 0).IsRequired();
+                money.Property(m => m.Currency).HasColumnName("Currency").HasMaxLength(3).HasDefaultValue("IRR");
+            });
 
             builder.Property(t => t.Type).IsRequired();
             builder.Property(t => t.Status).IsRequired();

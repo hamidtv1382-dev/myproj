@@ -16,10 +16,11 @@ namespace Review_Rating_Service.src._03_Infrastructure.Data.Configurations
             builder.Property(a => a.Url).IsRequired();
             builder.Property(a => a.Type).HasConversion<int>().IsRequired();
 
-            builder.HasOne<Review>()
-                .WithMany()
-                .HasForeignKey("ReviewId")
-                .OnDelete(DeleteBehavior.Cascade);
+            builder.HasOne(a => a.Review)
+          .WithMany()
+          .HasForeignKey(a => a.ReviewId)
+          .OnDelete(DeleteBehavior.Restrict); // حذف Cascade حذف چند مسیر
+
         }
     }
 }

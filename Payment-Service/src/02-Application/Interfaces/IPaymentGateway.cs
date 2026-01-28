@@ -21,4 +21,25 @@ namespace Payment_Service.src._02_Application.Interfaces
         public bool IsVerified { get; set; }
         public string TransactionId { get; set; }
     }
+
+    // اینترفیس ارتباط با سرویس کیف پول
+    public interface IWalletServiceClient
+    {
+        Task<bool> DeductFundsAsync(Guid userId, decimal amount);
+        Task<bool> RefundFundsAsync(Guid userId, decimal amount);
+    }
+
+    // اینترفیس ارتباط با سرویس سفارش
+    public interface IOrderServiceClient
+    {
+        Task<OrderInfoDto?> GetOrderInfoAsync(Guid orderId);
+    }
+
+    // مدل مشترک برای اطلاعات سفارش
+    public class OrderInfoDto
+    {
+        public Guid OrderId { get; set; }
+        public Guid BuyerId { get; set; }
+        public decimal FinalAmount { get; set; }
+    }
 }

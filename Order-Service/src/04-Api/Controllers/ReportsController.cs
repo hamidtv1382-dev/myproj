@@ -2,7 +2,6 @@
 using Order_Service.src._01_Domain.Core.Interfaces.Repositories;
 using Order_Service.src._02_Application.DTOs.Requests;
 using Order_Service.src._02_Application.DTOs.Responses;
-using System;
 
 namespace Order_Service.src._04_Api.Controllers
 {

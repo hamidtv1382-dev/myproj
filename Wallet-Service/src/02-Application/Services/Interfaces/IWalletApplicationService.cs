@@ -8,5 +8,6 @@ namespace Wallet_Service.src._02_Application.Services.Interfaces
         Task<WalletBalanceResponseDto> GetBalanceAsync(Guid ownerId);
         Task<WalletTransactionResponseDto> AddFundsAsync(AddFundsRequestDto request);
         Task<WalletTransactionResponseDto> DeductFundsAsync(DeductFundsRequestDto request);
+        Task<WalletTransactionResponseDto> DeductFundsByUserIdAsync(DeductFundsByUserIdRequestDto request);
     }
 }

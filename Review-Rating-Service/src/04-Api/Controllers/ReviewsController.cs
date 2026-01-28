@@ -1,8 +1,10 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Review_Rating_Service.src._02_Application.DTOs.Requests;
 using Review_Rating_Service.src._02_Application.DTOs.Responses;
 using Review_Rating_Service.src._02_Application.Services.Implementations;
 using Review_Rating_Service.src._02_Application.Services.Interfaces;
+using System.Security.Claims;
 
 namespace Review_Rating_Service.src._04_Api.Controllers
 {
@@ -16,11 +18,20 @@ namespace Review_Rating_Service.src._04_Api.Controllers
         {
             _reviewService = reviewService;
         }
-
         [HttpPost]
         public async Task<ActionResult<ReviewResponseDto>> CreateReview([FromBody] CreateReviewRequestDto request)
         {
-            var result = await _reviewService.CreateReviewAsync(request);
+           
+
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrWhiteSpace(userIdClaim))
+                return Unauthorized("UserId not found in token.");
+
+            var userId = Guid.Parse(userIdClaim);
+
+            // فراخوانی سرویس
+            var result = await _reviewService.CreateReviewAsync(request, userId);
+
             return CreatedAtAction(nameof(GetReviews), new { productId = result.ProductId }, result);
         }
 
@@ -32,7 +43,7 @@ namespace Review_Rating_Service.src._04_Api.Controllers
         }
 
         [HttpGet("summary/{productId}")]
-        public async Task<ActionResult<ReviewSummaryResponseDto>> GetSummary(Guid productId)
+        public async Task<ActionResult<ReviewSummaryResponseDto>> GetSummary(int productId)
         {
             var result = await _reviewService.GetProductSummaryAsync(productId);
             return Ok(result);

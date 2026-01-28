@@ -3,11 +3,11 @@
     public class ReviewCreatedEvent
     {
         public Guid ReviewId { get; set; }
-        public Guid ProductId { get; set; }
+        public int ProductId { get; set; }
         public Guid UserId { get; set; }
         public DateTime OccurredOn { get; set; }
 
-        public ReviewCreatedEvent(Guid reviewId, Guid productId, Guid userId)
+        public ReviewCreatedEvent(Guid reviewId, int productId, Guid userId)
         {
             ReviewId = reviewId;
             ProductId = productId;

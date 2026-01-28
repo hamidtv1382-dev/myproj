@@ -21,10 +21,12 @@ namespace Review_Rating_Service.src._03_Infrastructure.Data.Configurations
             builder.Property(r => r.Value).IsRequired();
 
             // تنظیم رابطه با Review
-            builder.HasOne<Review>()
-                .WithMany()
-                .HasForeignKey("ReviewId")
-                .OnDelete(DeleteBehavior.Cascade);
+            builder.HasOne(r => r.Review)
+           .WithMany()
+           .HasForeignKey(r => r.ReviewId)
+           .OnDelete(DeleteBehavior.Restrict); // حذف Cascade حذف چند مسیر
+            ; // حذف Cascade حذف چند مسیر
+
         }
     }
 }

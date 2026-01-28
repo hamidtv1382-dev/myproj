@@ -12,7 +12,7 @@ namespace Review_Rating_Service.src._01_Domain.Services.Implementations
             _unitOfWork = unitOfWork;
         }
 
-        public async Task<bool> CanUserReviewAsync(Guid userId, Guid productId)
+        public async Task<bool> CanUserReviewAsync(Guid userId, int productId)
         {
             var existingReview = await _unitOfWork.Reviews.GetByUserAndProductAsync(userId, productId);
             return existingReview == null;

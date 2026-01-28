@@ -9,12 +9,12 @@ namespace Finance_Service.src._04_Api.Controllers
     [Route("api/[controller]")]
     public class FeesController : ControllerBase
     {
-        private readonly IFeeApplicationService _feeService;
+        private readonly IFinanceApplicationService _financeService;
         private readonly ILogger<FeesController> _logger;
 
-        public FeesController(IFeeApplicationService feeService, ILogger<FeesController> logger)
+        public FeesController(IFinanceApplicationService financeService, ILogger<FeesController> logger)
         {
-            _feeService = feeService;
+            _financeService = financeService;
             _logger = logger;
         }
 
@@ -23,7 +23,7 @@ namespace Finance_Service.src._04_Api.Controllers
         {
             try
             {
-                var result = await _feeService.ApplyFeeAsync(request);
+                var result = await _financeService.ApplyFeeAsync(request);
                 return CreatedAtAction(nameof(GetFeeById), new { id = result.Id }, result);
             }
             catch (Exception ex)
@@ -38,7 +38,7 @@ namespace Finance_Service.src._04_Api.Controllers
         {
             try
             {
-                var result = await _feeService.GetFeeByIdAsync(id);
+                var result = await _financeService.GetFeeByIdAsync(id);
                 return Ok(result);
             }
             catch (Exception ex)
@@ -53,7 +53,7 @@ namespace Finance_Service.src._04_Api.Controllers
         {
             try
             {
-                var result = await _feeService.GetFeesByOrderIdAsync(orderId);
+                var result = await _financeService.GetFeesByOrderIdAsync(orderId);
                 return Ok(result);
             }
             catch (Exception ex)

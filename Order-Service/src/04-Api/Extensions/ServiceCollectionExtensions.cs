@@ -108,9 +108,7 @@ namespace Order_Service.src._04_Api.Extensions
                         IssuerSigningKey = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(
                          System.Text.Encoding.UTF8.GetBytes(configuration["JwtSettings:SecretKey"])),
 
-                        // *** اصلاحیه نهایی ***
                         RoleClaimType = ClaimTypes.Role,
-                        // این خط به سیستم می‌گوید اگر user_id در توکن بود، آن را به عنوان NameIdentifier در نظر بگیر
                         NameClaimType = "user_id"
                     };
 

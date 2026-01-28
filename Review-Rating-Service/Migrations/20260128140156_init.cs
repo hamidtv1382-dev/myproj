@@ -16,7 +16,7 @@ namespace Review_Rating_Service.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    ProductId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ProductId = table.Column<int>(type: "int", nullable: false),
                     UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     ReviewerName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     ReviewDate = table.Column<DateTime>(type: "datetime2", nullable: false),
@@ -49,7 +49,7 @@ namespace Review_Rating_Service.Migrations
                         column: x => x.ReviewId,
                         principalTable: "Reviews",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_Ratings_Reviews_ReviewId1",
                         column: x => x.ReviewId1,
@@ -75,7 +75,7 @@ namespace Review_Rating_Service.Migrations
                         column: x => x.ReviewId,
                         principalTable: "Reviews",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_ReviewAttachments_Reviews_ReviewId1",
                         column: x => x.ReviewId1,

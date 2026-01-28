@@ -9,20 +9,15 @@ namespace Notification_Services.src._03_Infrastructure.Data.Configurations
         public void Configure(EntityTypeBuilder<NotificationRecipient> builder)
         {
             builder.ToTable("NotificationRecipients");
-
             builder.HasKey(r => r.Id);
-
             builder.Property<Guid>("NotificationId").IsRequired();
 
             builder.Property(r => r.Type).HasConversion<int>().IsRequired();
-
-            // Map Contact property directly
             builder.Property(r => r.Contact).HasMaxLength(500).IsRequired();
-
             builder.Property(r => r.IsRead).IsRequired();
 
             builder.HasOne<Notification>()
-                .WithMany()
+                .WithMany(n => n.Recipients)
                 .HasForeignKey("NotificationId")
                 .OnDelete(DeleteBehavior.Cascade);
         }

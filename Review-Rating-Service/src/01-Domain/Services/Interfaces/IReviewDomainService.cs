@@ -2,6 +2,6 @@
 {
     public interface IReviewDomainService
     {
-        Task<bool> CanUserReviewAsync(Guid userId, Guid productId);
+        Task<bool> CanUserReviewAsync(Guid userId, int productId);
     }
 }

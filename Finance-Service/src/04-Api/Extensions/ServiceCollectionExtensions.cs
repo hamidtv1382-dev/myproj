@@ -30,13 +30,21 @@ namespace Finance_Service.src._04_Api.Extensions
             services.AddScoped<IFeeApplicationService, FeeApplicationService>();
             services.AddScoped<ICommissionApplicationService, CommissionApplicationService>();
             services.AddScoped<ISettlementApplicationService, SettlementApplicationService>();
+            services.AddScoped<IFinanceApplicationService, FinanceApplicationService>();
 
             // Domain Services
             services.AddScoped<IFinanceDomainService, FinanceDomainService>();
 
             // Infrastructure Services
             services.AddScoped<IExternalPaymentService, PaymentGatewayClient>();
+            services.AddScoped<IOrderServiceClient, OrderServiceClient>();
             services.AddSingleton<ICacheService, RedisCacheService>();
+
+            // Register HttpClients with Base Addresses
+            services.AddHttpClient<OrderServiceClient>(client =>
+            {
+                client.BaseAddress = new Uri(configuration["ExternalServices:OrderService"] ?? "http://localhost:5288/api");
+            });
 
             // CORS
             services.AddCors(options =>

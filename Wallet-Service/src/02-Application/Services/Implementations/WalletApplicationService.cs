@@ -30,7 +30,7 @@ namespace Wallet_Service.src._02_Application.Services.Implementations
 
             if (wallet == null)
             {
-                // Auto-create wallet if not exists (Optional logic)
+                // Auto-create wallet if not exists
                 wallet = await _walletDomainService.CreateWalletAsync(ownerId);
             }
 
@@ -60,7 +60,7 @@ namespace Wallet_Service.src._02_Application.Services.Implementations
 
             if (!success) throw new Exception("Failed to credit wallet.");
 
-            // Fetch the newly created transaction
+            // Fetch newly created transaction
             var transaction = await _unitOfWork.WalletTransactions.GetByWalletIdAsync(wallet.Id);
             var latestTransaction = transaction.OrderByDescending(t => t.CreatedAt).FirstOrDefault();
 
@@ -77,15 +77,37 @@ namespace Wallet_Service.src._02_Application.Services.Implementations
 
             var referenceId = Guid.NewGuid().ToString();
 
-            // صدا زدن سرویس دامین که اکنون تراکنش را می‌سازد و موجودی را کم می‌کند
             var success = await _walletDomainService.DebitWalletAsync(wallet.Id, request.Amount, referenceId, request.Description);
 
             if (!success) throw new Exception("Failed to debit wallet.");
 
-            // دریافت لیست تراکنش‌ها
             var transactions = await _unitOfWork.WalletTransactions.GetByWalletIdAsync(wallet.Id);
+            var latestTransaction = transactions.FirstOrDefault();
 
-            // چون در متد بالا SaveChanges زده شد، اولین آیتم در لیست، همونی است که الان ساختید
+            return _mapper.MapToWalletTransactionResponseDto(latestTransaction);
+        }
+
+        public async Task<WalletTransactionResponseDto> DeductFundsByUserIdAsync(DeductFundsByUserIdRequestDto request)
+        {
+            var wallet = await _unitOfWork.Wallets.GetByOwnerIdAsync(request.UserId);
+
+            if (wallet == null)
+            {
+                // اگر ولت وجود نداشت، خودکار می‌سازیم تا خطا ندهد (یا می‌توان خطا داد)
+                wallet = await _walletDomainService.CreateWalletAsync(request.UserId);
+            }
+
+            if (wallet.Balance.Amount < request.Amount.Amount)
+                throw new InsufficientWalletBalanceException("Insufficient funds.");
+
+            var referenceId = Guid.NewGuid().ToString();
+            var description = request.Description ?? "Deduction via UserId";
+
+            var success = await _walletDomainService.DebitWalletAsync(wallet.Id, request.Amount, referenceId, description);
+
+            if (!success) throw new Exception("Failed to debit wallet.");
+
+            var transactions = await _unitOfWork.WalletTransactions.GetByWalletIdAsync(wallet.Id);
             var latestTransaction = transactions.FirstOrDefault();
 
             return _mapper.MapToWalletTransactionResponseDto(latestTransaction);

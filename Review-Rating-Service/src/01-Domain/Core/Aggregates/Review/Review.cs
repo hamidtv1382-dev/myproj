@@ -7,7 +7,7 @@ namespace Review_Rating_Service.src._01_Domain.Core.Aggregates.Review
 {
     public class Review : AggregateRoot
     {
-        public Guid ProductId { get; private set; }
+        public int ProductId { get; private set; }
         public Guid UserId { get; private set; }
         public ReviewerName ReviewerName { get; private set; }
         public ReviewDate ReviewDate { get; private set; }
@@ -24,7 +24,7 @@ namespace Review_Rating_Service.src._01_Domain.Core.Aggregates.Review
 
         private Review() { }
 
-        public Review(Guid productId, Guid userId, ReviewerName reviewerName, ReviewText text)
+        public Review(int productId, Guid userId, ReviewerName reviewerName, ReviewText text)
         {
             Id = Guid.NewGuid();
             ProductId = productId;

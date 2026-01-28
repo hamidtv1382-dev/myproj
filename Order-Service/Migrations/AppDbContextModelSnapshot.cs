@@ -47,6 +47,8 @@ namespace Order_Service.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("DiscountId");
+
                     b.ToTable("Baskets", (string)null);
                 });
 
@@ -205,6 +207,11 @@ namespace Order_Service.Migrations
                     b.Property<int>("Quantity")
                         .HasColumnType("int");
 
+                    b.Property<string>("SellerId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
@@ -308,6 +315,10 @@ namespace Order_Service.Migrations
 
             modelBuilder.Entity("Order_Service.src._01_Domain.Core.Entities.Basket", b =>
                 {
+                    b.HasOne("Order_Service.src._01_Domain.Core.Entities.Discount", "AppliedDiscount")
+                        .WithMany()
+                        .HasForeignKey("DiscountId");
+
                     b.OwnsOne("Order_Service.src._01_Domain.Core.ValueObjects.Money", "TotalAmount", b1 =>
                         {
                             b1.Property<Guid>("BasketId")
@@ -332,6 +343,8 @@ namespace Order_Service.Migrations
                             b1.WithOwner()
                                 .HasForeignKey("BasketId");
                         });
+
+                    b.Navigation("AppliedDiscount");
 
                     b.Navigation("TotalAmount")
                         .IsRequired();

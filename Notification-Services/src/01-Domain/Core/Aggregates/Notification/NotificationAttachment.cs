@@ -9,12 +9,8 @@
 
         public NotificationAttachment(string fileName, string fileUrl, long fileSizeBytes)
         {
-            if (string.IsNullOrWhiteSpace(fileName))
-                throw new ArgumentException("File name is required.", nameof(fileName));
-            if (string.IsNullOrWhiteSpace(fileUrl))
-                throw new ArgumentException("File URL is required.", nameof(fileUrl));
-
-            Id = Guid.NewGuid();
+            if (string.IsNullOrWhiteSpace(fileName)) throw new ArgumentException("File name is required.", nameof(fileName));
+            if (string.IsNullOrWhiteSpace(fileUrl)) throw new ArgumentException("File URL is required.", nameof(fileUrl));
             FileName = fileName;
             FileUrl = fileUrl;
             FileSizeBytes = fileSizeBytes;

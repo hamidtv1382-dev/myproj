@@ -4,7 +4,7 @@ namespace Review_Rating_Service.src._02_Application.DTOs.Requests
 {
     public class GetReviewsFilterRequestDto
     {
-        public Guid? ProductId { get; set; }
+        public int? ProductId { get; set; }
         public Guid? UserId { get; set; }
         public int? MinRating { get; set; }
         public int? MaxRating { get; set; }

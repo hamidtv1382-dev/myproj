@@ -27,7 +27,6 @@ namespace Order_Service.src._03_Infrastructure.Services.External
 
         public async Task<CatalogProductDto?> GetProductByIdAsync(int productId)
         {
-            // مستقیماً همان عدد را به Catalog Service می‌فرستیم (چون هر دو int هستند)
             var response = await _retryPolicy.ExecuteAsync(() =>
                 _httpClient.GetAsync($"/api/public/products/{productId}"));
 
@@ -38,7 +37,6 @@ namespace Order_Service.src._03_Infrastructure.Services.External
                 return null;
             }
 
-            // مپ کردن پاسخ به مدل داخلی
             var product = await response.Content.ReadFromJsonAsync<CatalogServiceProductResponse>();
 
             if (product == null) return null;
@@ -48,7 +46,9 @@ namespace Order_Service.src._03_Infrastructure.Services.External
                 Id = product.Id,
                 Name = product.Name,
                 Price = product.Price,
-                ImageUrl = product.ImageUrl
+                ImageUrl = product.ImageUrl,
+                SellerId = product.CreatedByUserId,
+                CategoryId = product.CategoryId
             };
         }
 
@@ -60,7 +60,6 @@ namespace Order_Service.src._03_Infrastructure.Services.External
             return response.IsSuccessStatusCode;
         }
 
-        // مدل پاسخ واقعی سرویس کاتالوگ
         public class CatalogServiceProductResponse
         {
             public int Id { get; set; }
@@ -68,15 +67,18 @@ namespace Order_Service.src._03_Infrastructure.Services.External
             public decimal Price { get; set; }
             public string? ImageUrl { get; set; }
             public string Sku { get; set; }
+            public string CreatedByUserId { get; set; }
+            public int CategoryId { get; set; }
         }
 
-        // مدل ساده برای استفاده داخلی
         public class CatalogProductDto
         {
             public int Id { get; set; }
             public string Name { get; set; }
             public decimal Price { get; set; }
             public string? ImageUrl { get; set; }
+            public string SellerId { get; set; }
+            public int CategoryId { get; set; }
         }
     }
 }

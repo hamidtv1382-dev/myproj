@@ -15,7 +15,7 @@ namespace Notification_Services.Migrations
                 name: "Notifications",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false, defaultValueSql: "newid()"),
                     TemplateId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     Type = table.Column<int>(type: "int", nullable: false),
                     Status = table.Column<int>(type: "int", nullable: false),
@@ -60,8 +60,7 @@ namespace Notification_Services.Migrations
                     FileName = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
                     FileUrl = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: false),
                     FileSizeBytes = table.Column<long>(type: "bigint", nullable: false),
-                    NotificationId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    NotificationId1 = table.Column<Guid>(type: "uniqueidentifier", nullable: true)
+                    NotificationId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -72,11 +71,6 @@ namespace Notification_Services.Migrations
                         principalTable: "Notifications",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_NotificationAttachments_Notifications_NotificationId1",
-                        column: x => x.NotificationId1,
-                        principalTable: "Notifications",
-                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
@@ -87,8 +81,7 @@ namespace Notification_Services.Migrations
                     Type = table.Column<int>(type: "int", nullable: false),
                     Contact = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
                     IsRead = table.Column<bool>(type: "bit", nullable: false),
-                    NotificationId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    NotificationId1 = table.Column<Guid>(type: "uniqueidentifier", nullable: true)
+                    NotificationId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -99,11 +92,6 @@ namespace Notification_Services.Migrations
                         principalTable: "Notifications",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_NotificationRecipients_Notifications_NotificationId1",
-                        column: x => x.NotificationId1,
-                        principalTable: "Notifications",
-                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateIndex(
@@ -112,19 +100,9 @@ namespace Notification_Services.Migrations
                 column: "NotificationId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_NotificationAttachments_NotificationId1",
-                table: "NotificationAttachments",
-                column: "NotificationId1");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_NotificationRecipients_NotificationId",
                 table: "NotificationRecipients",
                 column: "NotificationId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_NotificationRecipients_NotificationId1",
-                table: "NotificationRecipients",
-                column: "NotificationId1");
         }
 
         /// <inheritdoc />

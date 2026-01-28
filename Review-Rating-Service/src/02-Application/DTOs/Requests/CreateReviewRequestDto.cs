@@ -6,7 +6,7 @@ namespace Review_Rating_Service.src._02_Application.DTOs.Requests
     public class CreateReviewRequestDto
     {
         [Required]
-        public Guid ProductId { get; set; }
+        public int ProductId { get; set; }
 
         [Required]
         public Guid UserId { get; set; }
@@ -20,6 +20,9 @@ namespace Review_Rating_Service.src._02_Application.DTOs.Requests
         public string ReviewerName { get; set; }
 
         public List<CreateRatingDto> Ratings { get; set; } = new List<CreateRatingDto>();
+
+        // اضافه شده: لیست ضمیمه ها
+        public List<CreateAttachmentDto> Attachments { get; set; } = new List<CreateAttachmentDto>();
     }
 
     public class CreateRatingDto
@@ -30,5 +33,15 @@ namespace Review_Rating_Service.src._02_Application.DTOs.Requests
         [Required]
         [Range(1, 5)]
         public int Value { get; set; }
+    }
+
+    // اضافه شده: مدل برای دریافت ضمیمه
+    public class CreateAttachmentDto
+    {
+        [Required]
+        public string Url { get; set; }
+
+        [Required]
+        public AttachmentType Type { get; set; } // Image یا Video
     }
 }
