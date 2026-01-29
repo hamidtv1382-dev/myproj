@@ -45,6 +45,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Notification-Services", "No
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Media-Service", "Media-Service\Media-Service.csproj", "{67C040AF-FECB-4529-8817-E37DC50CA373}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Messaging-Service", "Messaging-Service\Messaging-Service.csproj", "{17BC3DF1-D755-4F7F-83FD-C873988D9C44}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -115,6 +117,10 @@ Global
 		{67C040AF-FECB-4529-8817-E37DC50CA373}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{67C040AF-FECB-4529-8817-E37DC50CA373}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{67C040AF-FECB-4529-8817-E37DC50CA373}.Release|Any CPU.Build.0 = Release|Any CPU
+		{17BC3DF1-D755-4F7F-83FD-C873988D9C44}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{17BC3DF1-D755-4F7F-83FD-C873988D9C44}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{17BC3DF1-D755-4F7F-83FD-C873988D9C44}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{17BC3DF1-D755-4F7F-83FD-C873988D9C44}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -140,6 +146,7 @@ Global
 		{39308D9B-710F-416A-8D2B-E281F99C66D3} = {CF275DC5-14D4-4704-8C23-220399D2B411}
 		{8C2C83B1-CBFE-45CC-B773-4BB45365917B} = {CF275DC5-14D4-4704-8C23-220399D2B411}
 		{67C040AF-FECB-4529-8817-E37DC50CA373} = {CF275DC5-14D4-4704-8C23-220399D2B411}
+		{17BC3DF1-D755-4F7F-83FD-C873988D9C44} = {CF275DC5-14D4-4704-8C23-220399D2B411}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {CE5E4472-A596-4661-BE80-EABC1C5B637C}

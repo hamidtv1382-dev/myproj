@@ -29,4 +29,8 @@
     </PackageReference>
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Finance-Service\Finance-Service.csproj" />
+  </ItemGroup>
+
 </Project>

@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Messaging_Service</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.11" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="src\01-Domain\Core\Common\" />
+    <Folder Include="src\01-Domain\Core\Entities\" />
+    <Folder Include="src\01-Domain\Core\Enums\" />
+    <Folder Include="src\01-Domain\Core\Events\" />
+    <Folder Include="src\01-Domain\Core\Interfaces\Repositories\" />
+    <Folder Include="src\01-Domain\Core\Interfaces\Services\" />
+    <Folder Include="src\01-Domain\Core\ValueObjects\" />
+    <Folder Include="src\02-Application\DTOs\Responses\" />
+    <Folder Include="src\02-Application\DTOs\Requests\" />
+    <Folder Include="src\02-Application\Mappings\" />
+    <Folder Include="src\02-Application\Exceptions\" />
+    <Folder Include="src\02-Application\Services\Interfaces\" />
+    <Folder Include="src\02-Application\Services\Implementations\" />
+    <Folder Include="src\03-Infrastructure\Data\Configurations\" />
+    <Folder Include="src\03-Infrastructure\Caching\" />
+    <Folder Include="src\03-Infrastructure\Repositories\" />
+    <Folder Include="src\03-Infrastructure\Services\Moderation\" />
+    <Folder Include="src\03-Infrastructure\Services\NotificationGateway\" />
+    <Folder Include="src\04-Api\Controllers\" />
+    <Folder Include="src\04-Api\Filters\" />
+    <Folder Include="src\04-Api\Middlewares\" />
+    <Folder Include="src\04-Api\Extensions\" />
+  </ItemGroup>
+
+</Project>
