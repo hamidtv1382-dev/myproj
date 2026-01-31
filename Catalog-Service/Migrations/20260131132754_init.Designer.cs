@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Catalog_Service.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260131113300_init")]
+    [Migration("20260131132754_init")]
     partial class init
     {
         /// <inheritdoc />
@@ -230,10 +230,10 @@ namespace Catalog_Service.Migrations
                     b.Property<int?>("ProductId")
                         .HasColumnType("int");
 
-                    b.Property<int?>("ProductId1")
+                    b.Property<int?>("ProductReviewId")
                         .HasColumnType("int");
 
-                    b.Property<int?>("ProductReviewId")
+                    b.Property<int?>("ProductReviewId1")
                         .HasColumnType("int");
 
                     b.Property<int?>("ProductVariantId")
@@ -267,9 +267,9 @@ namespace Catalog_Service.Migrations
 
                     b.HasIndex("ProductId");
 
-                    b.HasIndex("ProductId1");
-
                     b.HasIndex("ProductReviewId");
+
+                    b.HasIndex("ProductReviewId1");
 
                     b.HasIndex("ProductVariantId");
 
@@ -333,6 +333,12 @@ namespace Catalog_Service.Migrations
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
+
+                    b.Property<decimal?>("OriginalPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("Price")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime?>("PublishedAt")
                         .HasColumnType("datetime2");
@@ -689,18 +695,18 @@ namespace Catalog_Service.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Catalog_Service.src._01_Domain.Core.Entities.Product", null)
-                        .WithMany()
+                        .WithMany("Images")
                         .HasForeignKey("ProductId")
                         .OnDelete(DeleteBehavior.Restrict);
 
-                    b.HasOne("Catalog_Service.src._01_Domain.Core.Entities.Product", null)
-                        .WithMany("Images")
-                        .HasForeignKey("ProductId1");
+                    b.HasOne("Catalog_Service.src._01_Domain.Core.Entities.ProductReview", null)
+                        .WithMany()
+                        .HasForeignKey("ProductReviewId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Catalog_Service.src._01_Domain.Core.Entities.ProductReview", null)
                         .WithMany("Images")
-                        .HasForeignKey("ProductReviewId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .HasForeignKey("ProductReviewId1");
 
                     b.HasOne("Catalog_Service.src._01_Domain.Core.Entities.ProductVariant", null)
                         .WithMany()

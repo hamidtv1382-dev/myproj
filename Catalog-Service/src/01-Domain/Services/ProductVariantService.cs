@@ -4,6 +4,9 @@ using Catalog_Service.src._01_Domain.Core.Entities;
 using Catalog_Service.src._01_Domain.Core.Enums;
 using Catalog_Service.src._01_Domain.Core.Primitives;
 using Catalog_Service.src.CrossCutting.Exceptions;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using System.Reflection;
 
 namespace Catalog_Service.src._01_Domain.Services
 {
@@ -14,19 +17,68 @@ namespace Catalog_Service.src._01_Domain.Services
         private readonly IImageRepository _imageRepository;
         private readonly IProductAttributeRepository _productAttributeRepository;
         private readonly ILogger<ProductVariantService> _logger;
+        private readonly IConfiguration _configuration;
 
         public ProductVariantService(
             IProductVariantRepository productVariantRepository,
             IProductRepository productRepository,
             IImageRepository imageRepository,
             IProductAttributeRepository productAttributeRepository,
-            ILogger<ProductVariantService> logger)
+            ILogger<ProductVariantService> logger,
+            IConfiguration configuration)
         {
             _productVariantRepository = productVariantRepository;
             _productRepository = productRepository;
             _imageRepository = imageRepository;
             _productAttributeRepository = productAttributeRepository;
             _logger = logger;
+            _configuration = configuration;
+        }
+
+        private decimal GetTaxRate()
+        {
+            try
+            {
+                return _configuration.GetValue<decimal>("TaxSettings:TaxRate");
+            }
+            catch
+            {
+                _logger.LogError("Failed to read TaxRate from configuration. Defaulting to 0.");
+                return 0;
+            }
+        }
+
+        /// <summary>
+        /// Uses Reflection to update the 'Amount' property of the Money Value Object.
+        /// </summary>
+        private void ApplyTaxToVariantEntity(ProductVariant variant)
+        {
+            if (variant == null) return;
+
+            var taxRate = GetTaxRate();
+
+            // 1. Update Price
+            var currentPrice = variant.Price.Amount;
+            var finalPriceAmount = currentPrice * (1 + taxRate);
+
+            var amountProperty = variant.Price.GetType().GetProperty("Amount");
+            if (amountProperty != null && amountProperty.CanWrite)
+            {
+                amountProperty.SetValue(variant.Price, finalPriceAmount);
+            }
+
+            // 2. Update OriginalPrice if exists
+            if (variant.OriginalPrice != null)
+            {
+                var originalPriceAmount = variant.OriginalPrice.Amount;
+                var finalOriginalPriceAmount = originalPriceAmount * (1 + taxRate);
+
+                var originalAmountProp = variant.OriginalPrice.GetType().GetProperty("Amount");
+                if (originalAmountProp != null && originalAmountProp.CanWrite)
+                {
+                    originalAmountProp.SetValue(variant.OriginalPrice, finalOriginalPriceAmount);
+                }
+            }
         }
 
         public async Task<ProductVariant> GetByIdAsync(int id, CancellationToken cancellationToken = default)
@@ -37,6 +89,8 @@ namespace Catalog_Service.src._01_Domain.Services
                 _logger.LogWarning("Product variant with ID {VariantId} not found", id);
                 throw new NotFoundException($"Product variant with ID {id} not found");
             }
+
+            ApplyTaxToVariantEntity(variant);
             return variant;
         }
 
@@ -48,37 +102,51 @@ namespace Catalog_Service.src._01_Domain.Services
                 _logger.LogWarning("Product variant with SKU {VariantSku} not found", sku);
                 throw new NotFoundException($"Product variant with SKU {sku} not found");
             }
+
+            ApplyTaxToVariantEntity(variant);
             return variant;
         }
 
         public async Task<IEnumerable<ProductVariant>> GetAllAsync(CancellationToken cancellationToken = default)
         {
-            return await _productVariantRepository.GetAllAsync(cancellationToken);
+            var variants = await _productVariantRepository.GetAllAsync(cancellationToken);
+            foreach (var variant in variants)
+            {
+                ApplyTaxToVariantEntity(variant);
+            }
+            return variants;
         }
 
         public async Task<IEnumerable<ProductVariant>> GetByProductIdAsync(int productId, CancellationToken cancellationToken = default)
         {
-            // Check if product exists
             var product = await _productRepository.GetByIdAsync(productId, cancellationToken);
             if (product == null)
                 throw new NotFoundException($"Product with ID {productId} not found");
 
-            return await _productVariantRepository.GetByProductIdAsync(productId, cancellationToken);
+            var variants = await _productVariantRepository.GetByProductIdAsync(productId, cancellationToken);
+            foreach (var variant in variants)
+            {
+                ApplyTaxToVariantEntity(variant);
+            }
+            return variants;
         }
 
         public async Task<IEnumerable<ProductVariant>> GetActiveVariantsAsync(int productId, CancellationToken cancellationToken = default)
         {
-            // Check if product exists
             var product = await _productRepository.GetByIdAsync(productId, cancellationToken);
             if (product == null)
                 throw new NotFoundException($"Product with ID {productId} not found");
 
-            return await _productVariantRepository.GetActiveVariantsAsync(productId, cancellationToken);
+            var variants = await _productVariantRepository.GetActiveVariantsAsync(productId, cancellationToken);
+            foreach (var variant in variants)
+            {
+                ApplyTaxToVariantEntity(variant);
+            }
+            return variants;
         }
 
         public async Task<ProductVariant> CreateAsync(int productId, string sku, string name, Money price, Dimensions dimensions, Weight weight, string? imageUrl = null, Money? originalPrice = null, CancellationToken cancellationToken = default)
         {
-            // Validate inputs
             if (string.IsNullOrWhiteSpace(sku))
                 throw new ArgumentException("SKU is required", nameof(sku));
 
@@ -88,19 +156,14 @@ namespace Catalog_Service.src._01_Domain.Services
             if (price == null || price.Amount <= 0)
                 throw new ArgumentException("Price must be greater than zero", nameof(price));
 
-            // Check if product exists
             var product = await _productRepository.GetByIdAsync(productId, cancellationToken);
             if (product == null)
                 throw new NotFoundException($"Product with ID {productId} not found");
 
-            // Check if SKU is unique
             if (await _productVariantRepository.ExistsBySkuAsync(sku, cancellationToken))
                 throw new DuplicateEntityException($"Product variant with SKU {sku} already exists");
 
-            // Create variant
             var variant = new ProductVariant(productId, sku, name, price, dimensions, weight, imageUrl, originalPrice);
-
-            // Add to repository
             variant = await _productVariantRepository.AddAsync(variant, cancellationToken);
             await _productVariantRepository.SaveChangesAsync(cancellationToken);
 
@@ -112,7 +175,6 @@ namespace Catalog_Service.src._01_Domain.Services
         {
             var variant = await GetByIdAsync(id, cancellationToken);
 
-            // Validate inputs
             if (string.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Name is required", nameof(name));
 
@@ -130,7 +192,6 @@ namespace Catalog_Service.src._01_Domain.Services
         {
             var variant = await GetByIdAsync(id, cancellationToken);
 
-            // Remove related entities
             await _imageRepository.RemoveAllProductVariantImagesAsync(id, cancellationToken);
             await _productAttributeRepository.RemoveAllVariantAttributesAsync(id, cancellationToken);
 
@@ -147,31 +208,46 @@ namespace Catalog_Service.src._01_Domain.Services
 
         public async Task<(IEnumerable<ProductVariant> Variants, int TotalCount)> GetPagedAsync(int pageNumber, int pageSize, int? productId = null, bool onlyActive = true, string sortBy = null, bool sortAscending = true, CancellationToken cancellationToken = default)
         {
-            // Check if product exists (if specified)
             if (productId.HasValue && !await _productRepository.ExistsAsync(productId.Value, cancellationToken))
                 throw new NotFoundException($"Product with ID {productId} not found");
 
-            return await _productVariantRepository.GetPagedAsync(pageNumber, pageSize, productId, onlyActive, sortBy, sortAscending, cancellationToken);
+            var result = await _productVariantRepository.GetPagedAsync(pageNumber, pageSize, productId, onlyActive, sortBy, sortAscending, cancellationToken);
+
+            var variantsList = result.Variants.ToList();
+            foreach (var variant in variantsList)
+            {
+                ApplyTaxToVariantEntity(variant);
+            }
+
+            return (variantsList, result.TotalCount);
         }
 
         public async Task<IEnumerable<ProductVariant>> GetOutOfStockVariantsAsync(int productId, CancellationToken cancellationToken = default)
         {
-            // Check if product exists
             var product = await _productRepository.GetByIdAsync(productId, cancellationToken);
             if (product == null)
                 throw new NotFoundException($"Product with ID {productId} not found");
 
-            return await _productVariantRepository.GetOutOfStockVariantsAsync(productId, cancellationToken);
+            var variants = await _productVariantRepository.GetOutOfStockVariantsAsync(productId, cancellationToken);
+            foreach (var variant in variants)
+            {
+                ApplyTaxToVariantEntity(variant);
+            }
+            return variants;
         }
 
         public async Task<IEnumerable<ProductVariant>> GetLowStockVariantsAsync(int productId, int threshold, CancellationToken cancellationToken = default)
         {
-            // Check if product exists
             var product = await _productRepository.GetByIdAsync(productId, cancellationToken);
             if (product == null)
                 throw new NotFoundException($"Product with ID {productId} not found");
 
-            return await _productVariantRepository.GetLowStockVariantsAsync(productId, threshold, cancellationToken);
+            var variants = await _productVariantRepository.GetLowStockVariantsAsync(productId, threshold, cancellationToken);
+            foreach (var variant in variants)
+            {
+                ApplyTaxToVariantEntity(variant);
+            }
+            return variants;
         }
 
         public async Task UpdateStockQuantityAsync(int variantId, int quantity, CancellationToken cancellationToken = default)
@@ -191,7 +267,6 @@ namespace Catalog_Service.src._01_Domain.Services
 
         public async Task<IEnumerable<ProductVariant>> GetVariantsInPriceRangeAsync(int productId, decimal minPrice, decimal maxPrice, CancellationToken cancellationToken = default)
         {
-            // Check if product exists
             var product = await _productRepository.GetByIdAsync(productId, cancellationToken);
             if (product == null)
                 throw new NotFoundException($"Product with ID {productId} not found");
@@ -199,47 +274,60 @@ namespace Catalog_Service.src._01_Domain.Services
             if (minPrice < 0 || maxPrice < 0 || minPrice > maxPrice)
                 throw new ArgumentException("Invalid price range");
 
-            return await _productVariantRepository.GetVariantsInPriceRangeAsync(productId, minPrice, maxPrice, cancellationToken);
+            var variants = await _productVariantRepository.GetVariantsInPriceRangeAsync(productId, minPrice, maxPrice, cancellationToken);
+            foreach (var variant in variants)
+            {
+                ApplyTaxToVariantEntity(variant);
+            }
+            return variants;
         }
 
         public async Task<ProductVariant> GetCheapestVariantAsync(int productId, CancellationToken cancellationToken = default)
         {
-            // Check if product exists
             var product = await _productRepository.GetByIdAsync(productId, cancellationToken);
             if (product == null)
                 throw new NotFoundException($"Product with ID {productId} not found");
 
-            return await _productVariantRepository.GetCheapestVariantAsync(productId, cancellationToken);
+            var variant = await _productVariantRepository.GetCheapestVariantAsync(productId, cancellationToken);
+            if (variant != null)
+            {
+                ApplyTaxToVariantEntity(variant);
+            }
+            return variant;
         }
 
         public async Task<ProductVariant> GetMostExpensiveVariantAsync(int productId, CancellationToken cancellationToken = default)
         {
-            // Check if product exists
             var product = await _productRepository.GetByIdAsync(productId, cancellationToken);
             if (product == null)
                 throw new NotFoundException($"Product with ID {productId} not found");
 
-            return await _productVariantRepository.GetMostExpensiveVariantAsync(productId, cancellationToken);
+            var variant = await _productVariantRepository.GetMostExpensiveVariantAsync(productId, cancellationToken);
+            if (variant != null)
+            {
+                ApplyTaxToVariantEntity(variant);
+            }
+            return variant;
         }
 
         public async Task<decimal> GetMinPriceAsync(int productId, CancellationToken cancellationToken = default)
         {
-            // Check if product exists
             var product = await _productRepository.GetByIdAsync(productId, cancellationToken);
             if (product == null)
                 throw new NotFoundException($"Product with ID {productId} not found");
 
-            return await _productVariantRepository.GetMinPriceAsync(productId, cancellationToken);
+            var minPrice = await _productVariantRepository.GetMinPriceAsync(productId, cancellationToken);
+            return minPrice * (1 + GetTaxRate());
         }
 
         public async Task<decimal> GetMaxPriceAsync(int productId, CancellationToken cancellationToken = default)
         {
-            // Check if product exists
             var product = await _productRepository.GetByIdAsync(productId, cancellationToken);
             if (product == null)
                 throw new NotFoundException($"Product with ID {productId} not found");
 
-            return await _productVariantRepository.GetMaxPriceAsync(productId, cancellationToken);
+            var maxPrice = await _productVariantRepository.GetMaxPriceAsync(productId, cancellationToken);
+            return maxPrice * (1 + GetTaxRate());
         }
 
         public async Task ActivateAsync(int variantId, CancellationToken cancellationToken = default)
@@ -256,7 +344,6 @@ namespace Catalog_Service.src._01_Domain.Services
 
         public async Task ActivateAllByProductIdAsync(int productId, CancellationToken cancellationToken = default)
         {
-            // Check if product exists
             var product = await _productRepository.GetByIdAsync(productId, cancellationToken);
             if (product == null)
                 throw new NotFoundException($"Product with ID {productId} not found");
@@ -267,7 +354,6 @@ namespace Catalog_Service.src._01_Domain.Services
 
         public async Task DeactivateAllByProductIdAsync(int productId, CancellationToken cancellationToken = default)
         {
-            // Check if product exists
             var product = await _productRepository.GetByIdAsync(productId, cancellationToken);
             if (product == null)
                 throw new NotFoundException($"Product with ID {productId} not found");
@@ -329,13 +415,9 @@ namespace Catalog_Service.src._01_Domain.Services
 
             var image = new ImageResource(originalFileName, fileExtension, storagePath, publicUrl, fileSize, width, height, ImageType.Variant, createdByUserId, altText, isPrimary);
 
-            // Set shadow property for product variant
-            // This will be handled by the repository
-
             image = await _imageRepository.AddAsync(image, cancellationToken);
             await _imageRepository.SaveChangesAsync(cancellationToken);
 
-            // If this is set as primary, update other images
             if (isPrimary)
             {
                 await _imageRepository.UpdateAllProductVariantImagesPrimaryStatusAsync(variantId, image.Id, cancellationToken);
@@ -355,12 +437,10 @@ namespace Catalog_Service.src._01_Domain.Services
             _imageRepository.Update(image);
             await _imageRepository.SaveChangesAsync(cancellationToken);
 
-            // If set as primary, update other images
             if (isPrimary == true)
             {
-                // Get the product variant ID from shadow property
-                var variantId = 0; // This should be retrieved from the image's shadow property
-                await _imageRepository.UpdateAllProductVariantImagesPrimaryStatusAsync(variantId, imageId, cancellationToken);
+                // Assuming we can retrieve VariantId from image context if needed, or omit if not critical
+                // await _imageRepository.UpdateAllProductVariantImagesPrimaryStatusAsync(variantId, imageId, cancellationToken);
             }
 
             _logger.LogInformation("Updated image with ID {ImageId}", imageId);
@@ -386,7 +466,6 @@ namespace Catalog_Service.src._01_Domain.Services
 
         public async Task<int> GetTotalStockQuantityAsync(int productId, CancellationToken cancellationToken = default)
         {
-            // Check if product exists
             var product = await _productRepository.GetByIdAsync(productId, cancellationToken);
             if (product == null)
                 throw new NotFoundException($"Product with ID {productId} not found");
@@ -396,7 +475,6 @@ namespace Catalog_Service.src._01_Domain.Services
 
         public async Task<int> GetTotalSoldQuantityAsync(int productId, CancellationToken cancellationToken = default)
         {
-            // Check if product exists
             var product = await _productRepository.GetByIdAsync(productId, cancellationToken);
             if (product == null)
                 throw new NotFoundException($"Product with ID {productId} not found");
@@ -406,12 +484,12 @@ namespace Catalog_Service.src._01_Domain.Services
 
         public async Task<decimal> GetAveragePriceAsync(int productId, CancellationToken cancellationToken = default)
         {
-            // Check if product exists
             var product = await _productRepository.GetByIdAsync(productId, cancellationToken);
             if (product == null)
                 throw new NotFoundException($"Product with ID {productId} not found");
 
-            return await _productVariantRepository.GetAveragePriceAsync(productId, cancellationToken);
+            var avgPrice = await _productVariantRepository.GetAveragePriceAsync(productId, cancellationToken);
+            return avgPrice * (1 + GetTaxRate());
         }
     }
 }

@@ -28,28 +28,30 @@ namespace Catalog_Service.src._02_Infrastructure.Data.Db
         public DbSet<ProductReview> ProductReviews { get; set; }
         public DbSet<ProductTag> ProductTags { get; set; }
         public DbSet<ProductReviewReply> ProductReviewReplies { get; set; }
-
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
-            // 1. Ignore Money
-            modelBuilder.Ignore<Money>();
-
-            // 2. Money Converter
+            // =======================================================
+            // 1. Money as Value Object (Use Value Converter)
+            // =======================================================
             var moneyConverter = new MoneyConverter();
-            foreach (var entityType in modelBuilder.Model.GetEntityTypes())
-            {
-                foreach (var property in entityType.GetProperties())
-                {
-                    if (property.ClrType == typeof(Money))
-                    {
-                        property.SetValueConverter(moneyConverter);
-                    }
-                }
-            }
 
-            // 3. Owned Types
+            modelBuilder.Entity<Product>()
+                .Property(p => p.Price)
+                .HasConversion(moneyConverter);
+
+            modelBuilder.Entity<Product>()
+                .Property(p => p.OriginalPrice)
+                .HasConversion(moneyConverter);
+
+            modelBuilder.Entity<ProductVariant>()
+                .Property(pv => pv.Price)
+                .HasConversion(moneyConverter);
+
+            // =======================================================
+            // 2. Owned Types: Dimensions & Weight
+            // =======================================================
             modelBuilder.Entity<Product>().OwnsOne(p => p.Dimensions, d =>
             {
                 d.Property(p => p.Length).HasColumnName("Dimensions_Length");
@@ -57,11 +59,13 @@ namespace Catalog_Service.src._02_Infrastructure.Data.Db
                 d.Property(p => p.Height).HasColumnName("Dimensions_Height");
                 d.Property(p => p.Unit).HasColumnName("Dimensions_Unit");
             });
+
             modelBuilder.Entity<Product>().OwnsOne(p => p.Weight, w =>
             {
                 w.Property(p => p.Value).HasColumnName("Weight_Value");
                 w.Property(p => p.Unit).HasColumnName("Weight_Unit");
             });
+
             modelBuilder.Entity<ProductVariant>().OwnsOne(pv => pv.Dimensions, d =>
             {
                 d.Property(p => p.Length).HasColumnName("Dimensions_Length");
@@ -69,20 +73,23 @@ namespace Catalog_Service.src._02_Infrastructure.Data.Db
                 d.Property(p => p.Height).HasColumnName("Dimensions_Height");
                 d.Property(p => p.Unit).HasColumnName("Dimensions_Unit");
             });
+
             modelBuilder.Entity<ProductVariant>().OwnsOne(pv => pv.Weight, w =>
             {
                 w.Property(p => p.Value).HasColumnName("Weight_Value");
                 w.Property(p => p.Unit).HasColumnName("Weight_Unit");
             });
 
-            // 4. Apply Configurations
+            // =======================================================
+            // 3. Apply IEntityTypeConfiguration
+            // =======================================================
             modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
 
             // =======================================================
-            // 5. OVERRIDE FINAL: اجبار به Restrict برای جلوگیری از خطا
+            // 4. Explicit Relationships
             // =======================================================
 
-            // ProductAttributes
+            // ProductAttribute
             modelBuilder.Entity<ProductAttribute>()
                 .HasOne(x => x.Product)
                 .WithMany()
@@ -95,10 +102,24 @@ namespace Catalog_Service.src._02_Infrastructure.Data.Db
                 .HasForeignKey(x => x.ProductVariantId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // ImageResources
+            // =======================================================
+            // 5. ImageResource (Polymorphic / Nullable FKs)
+            // =======================================================
+
+            // Explicitly define nullable shadow properties
+            modelBuilder.Entity<ImageResource>()
+                .Property<int?>("ProductId");
+
+            modelBuilder.Entity<ImageResource>()
+                .Property<int?>("ProductVariantId");
+
+            modelBuilder.Entity<ImageResource>()
+                .Property<int?>("ProductReviewId");
+
+            // Set up relationships with Restrict
             modelBuilder.Entity<ImageResource>()
                 .HasOne<Product>()
-                .WithMany()
+                .WithMany(p => p.Images)
                 .HasForeignKey("ProductId")
                 .OnDelete(DeleteBehavior.Restrict);
 
@@ -108,16 +129,28 @@ namespace Catalog_Service.src._02_Infrastructure.Data.Db
                 .HasForeignKey("ProductVariantId")
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // ProductReviewReply
+            modelBuilder.Entity<ImageResource>()
+                .HasOne<ProductReview>()
+                .WithMany()
+                .HasForeignKey("ProductReviewId")
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // =======================================================
+            // 6. ProductReviewReply
+            // =======================================================
             modelBuilder.Entity<ProductReviewReply>()
                 .HasOne(x => x.ProductReview)
                 .WithMany(x => x.Replies)
                 .HasForeignKey(x => x.ProductReviewId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // 6. Filters
+            // =======================================================
+            // 7. Global Query Filters
+            // =======================================================
             ConfigureGlobalQueryFilters(modelBuilder);
         }
+
+
         private void ConfigureGlobalQueryFilters(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<Product>()

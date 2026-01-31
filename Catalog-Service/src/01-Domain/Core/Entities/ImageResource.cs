@@ -19,6 +19,7 @@ namespace Catalog_Service.src._01_Domain.Core.Entities
         public bool IsPrimary { get; private set; }
         public bool IsDeleted { get; private set; }
         public string CreatedByUserId { get; private set; }
+        public int? ProductId { get; private set; }
 
         // For EF Core
         protected ImageResource() { }
