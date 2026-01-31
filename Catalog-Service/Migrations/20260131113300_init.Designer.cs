@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Catalog_Service.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260108120902_init")]
+    [Migration("20260131113300_init")]
     partial class init
     {
         /// <inheritdoc />
@@ -87,12 +87,9 @@ namespace Catalog_Service.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("IsActive")
-                        .HasDatabaseName("IX_Brand_IsActive");
+                    b.HasIndex("IsActive");
 
-                    b.HasIndex("Slug")
-                        .IsUnique()
-                        .HasDatabaseName("IX_Brand_Slug");
+                    b.HasIndex("Slug");
 
                     b.ToTable("Brands", (string)null);
                 });
@@ -161,18 +158,11 @@ namespace Catalog_Service.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("DisplayOrder")
-                        .HasDatabaseName("IX_Category_DisplayOrder");
+                    b.HasIndex("DisplayOrder");
 
-                    b.HasIndex("IsActive")
-                        .HasDatabaseName("IX_Category_IsActive");
+                    b.HasIndex("ParentCategoryId");
 
-                    b.HasIndex("ParentCategoryId")
-                        .HasDatabaseName("IX_Category_ParentCategoryId");
-
-                    b.HasIndex("Slug")
-                        .IsUnique()
-                        .HasDatabaseName("IX_Category_Slug");
+                    b.HasIndex("Slug");
 
                     b.ToTable("Categories", null, t =>
                         {
@@ -240,6 +230,9 @@ namespace Catalog_Service.Migrations
                     b.Property<int?>("ProductId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("ProductId1")
+                        .HasColumnType("int");
+
                     b.Property<int?>("ProductReviewId")
                         .HasColumnType("int");
 
@@ -264,29 +257,25 @@ namespace Catalog_Service.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("BrandId")
-                        .HasDatabaseName("IX_ImageResource_BrandId");
+                    b.HasIndex("BrandId");
 
-                    b.HasIndex("CategoryId")
-                        .HasDatabaseName("IX_ImageResource_CategoryId");
+                    b.HasIndex("CategoryId");
 
-                    b.HasIndex("ImageType")
-                        .HasDatabaseName("IX_ImageResource_ImageType");
+                    b.HasIndex("ImageType");
 
-                    b.HasIndex("IsPrimary")
-                        .HasDatabaseName("IX_ImageResource_IsPrimary");
+                    b.HasIndex("IsPrimary");
 
-                    b.HasIndex("ProductId")
-                        .HasDatabaseName("IX_ImageResource_ProductId");
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("ProductId1");
 
                     b.HasIndex("ProductReviewId");
 
-                    b.HasIndex("ProductVariantId")
-                        .HasDatabaseName("IX_ImageResource_ProductVariantId");
+                    b.HasIndex("ProductVariantId");
 
                     b.ToTable("ImageResources", null, t =>
                         {
-                            t.HasCheckConstraint("CK_ImageResource_SingleEntityReference", "(ProductId IS NOT NULL AND CategoryId IS NULL AND BrandId IS NULL AND ProductVariantId IS NULL) OR (ProductId IS NULL AND CategoryId IS NOT NULL AND BrandId IS NULL AND ProductVariantId IS NULL) OR (ProductId IS NULL AND CategoryId IS NULL AND BrandId IS NOT NULL AND ProductVariantId IS NULL) OR (ProductId IS NULL AND CategoryId IS NULL AND BrandId IS NULL AND ProductVariantId IS NOT NULL)");
+                            t.HasCheckConstraint("CK_ImageResource_SingleEntityReference", "(ProductId IS NOT NULL AND CategoryId IS NULL AND BrandId IS NULL AND ProductVariantId IS NULL AND ProductReviewId IS NULL) OR (ProductId IS NULL AND CategoryId IS NOT NULL AND BrandId IS NULL AND ProductVariantId IS NULL AND ProductReviewId IS NULL) OR (ProductId IS NULL AND CategoryId IS NULL AND BrandId IS NOT NULL AND ProductVariantId IS NULL AND ProductReviewId IS NULL) OR (ProductId IS NULL AND CategoryId IS NULL AND BrandId IS NULL AND ProductVariantId IS NOT NULL AND ProductReviewId IS NULL) OR (ProductId IS NULL AND CategoryId IS NULL AND BrandId IS NULL AND ProductVariantId IS NULL AND ProductReviewId IS NOT NULL)");
                         });
                 });
 
@@ -345,12 +334,6 @@ namespace Catalog_Service.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
-                    b.Property<decimal?>("OriginalPrice")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal>("Price")
-                        .HasColumnType("decimal(18,2)");
-
                     b.Property<DateTime?>("PublishedAt")
                         .HasColumnType("datetime2");
 
@@ -389,43 +372,16 @@ namespace Catalog_Service.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("BrandId")
-                        .HasDatabaseName("IX_Product_BrandId");
-
-                    b.HasIndex("CategoryId")
-                        .HasDatabaseName("IX_Product_CategoryId");
-
-                    b.HasIndex("CreatedAt")
-                        .HasDatabaseName("IX_Product_CreatedAt");
-
-                    b.HasIndex("IsFeatured")
-                        .HasDatabaseName("IX_Product_IsFeatured");
-
-                    b.HasIndex("Name")
-                        .HasDatabaseName("IX_Product_Name");
+                    b.HasIndex("CategoryId");
 
                     b.HasIndex("Sku")
-                        .IsUnique()
-                        .HasDatabaseName("IX_Product_Sku");
+                        .IsUnique();
 
-                    b.HasIndex("Slug")
-                        .IsUnique()
-                        .HasDatabaseName("IX_Product_Slug");
+                    b.HasIndex("Slug");
 
-                    b.HasIndex("Status")
-                        .HasDatabaseName("IX_Product_Status");
+                    b.HasIndex("BrandId", "CategoryId");
 
-                    b.HasIndex("StockStatus")
-                        .HasDatabaseName("IX_Product_StockStatus");
-
-                    b.HasIndex("BrandId", "CategoryId")
-                        .HasDatabaseName("IX_Product_BrandId_CategoryId");
-
-                    b.HasIndex("Status", "IsFeatured")
-                        .HasDatabaseName("IX_Product_Status_IsFeatured");
-
-                    b.HasIndex("StockStatus", "StockQuantity")
-                        .HasDatabaseName("IX_Product_StockStatus_StockQuantity");
+                    b.HasIndex("Status", "IsFeatured");
 
                     b.ToTable("Products", (string)null);
                 });
@@ -459,7 +415,13 @@ namespace Catalog_Service.Migrations
                     b.Property<int>("ProductId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("ProductId1")
+                        .HasColumnType("int");
+
                     b.Property<int?>("ProductVariantId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("ProductVariantId1")
                         .HasColumnType("int");
 
                     b.Property<DateTime?>("UpdatedAt")
@@ -472,17 +434,15 @@ namespace Catalog_Service.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Name")
-                        .HasDatabaseName("IX_ProductAttribute_Name");
+                    b.HasIndex("Name");
 
-                    b.HasIndex("ProductId")
-                        .HasDatabaseName("IX_ProductAttribute_ProductId");
+                    b.HasIndex("ProductId");
 
-                    b.HasIndex("ProductVariantId")
-                        .HasDatabaseName("IX_ProductAttribute_ProductVariantId");
+                    b.HasIndex("ProductId1");
 
-                    b.HasIndex("ProductId", "Name")
-                        .HasDatabaseName("IX_ProductAttribute_ProductId_Name");
+                    b.HasIndex("ProductVariantId");
+
+                    b.HasIndex("ProductVariantId1");
 
                     b.ToTable("ProductAttributes", null, t =>
                         {
@@ -547,29 +507,20 @@ namespace Catalog_Service.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("IsVerifiedPurchase")
-                        .HasDatabaseName("IX_ProductReview_IsVerifiedPurchase");
+                    b.HasIndex("ProductId");
 
-                    b.HasIndex("ProductId")
-                        .HasDatabaseName("IX_ProductReview_ProductId");
+                    b.HasIndex("Rating");
 
-                    b.HasIndex("Rating")
-                        .HasDatabaseName("IX_ProductReview_Rating");
+                    b.HasIndex("Status");
 
-                    b.HasIndex("Status")
-                        .HasDatabaseName("IX_ProductReview_Status");
-
-                    b.HasIndex("UserId")
-                        .HasDatabaseName("IX_ProductReview_UserId");
+                    b.HasIndex("UserId");
 
                     b.HasIndex("ProductId", "UserId")
                         .IsUnique()
-                        .HasDatabaseName("IX_ProductReview_ProductId_UserId");
+                        .HasFilter("[IsDeleted] = 0");
 
                     b.ToTable("ProductReviews", null, t =>
                         {
-                            t.HasCheckConstraint("CK_ProductReview_ValidHelpfulVotes", "HelpfulVotes >= 0");
-
                             t.HasCheckConstraint("CK_ProductReview_ValidRating", "Rating >= 1 AND Rating <= 5");
                         });
                 });
@@ -584,7 +535,8 @@ namespace Catalog_Service.Migrations
 
                     b.Property<string>("Comment")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -597,13 +549,14 @@ namespace Catalog_Service.Migrations
 
                     b.Property<string>("UserId")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
 
                     b.HasIndex("ProductReviewId");
 
-                    b.ToTable("ProductReviewReplies");
+                    b.ToTable("ProductReviewReplies", (string)null);
                 });
 
             modelBuilder.Entity("Catalog_Service.src._01_Domain.Core.Entities.ProductTag", b =>
@@ -632,15 +585,12 @@ namespace Catalog_Service.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ProductId")
-                        .HasDatabaseName("IX_ProductTag_ProductId");
+                    b.HasIndex("ProductId");
 
-                    b.HasIndex("TagText")
-                        .HasDatabaseName("IX_ProductTag_TagText");
+                    b.HasIndex("TagText");
 
                     b.HasIndex("ProductId", "TagText")
-                        .IsUnique()
-                        .HasDatabaseName("IX_ProductTag_ProductId_TagText");
+                        .IsUnique();
 
                     b.ToTable("ProductTags", (string)null);
                 });
@@ -704,23 +654,16 @@ namespace Catalog_Service.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("IsActive")
-                        .HasDatabaseName("IX_ProductVariant_IsActive");
+                    b.HasIndex("IsActive");
 
-                    b.HasIndex("ProductId")
-                        .HasDatabaseName("IX_ProductVariant_ProductId");
+                    b.HasIndex("ProductId");
 
                     b.HasIndex("Sku")
-                        .IsUnique()
-                        .HasDatabaseName("IX_ProductVariant_Sku");
+                        .IsUnique();
 
-                    b.HasIndex("StockStatus")
-                        .HasDatabaseName("IX_ProductVariant_StockStatus");
+                    b.HasIndex("StockStatus");
 
-                    b.ToTable("ProductVariants", null, t =>
-                        {
-                            t.HasCheckConstraint("CK_ProductVariant_ValidOriginalPrice", "OriginalPrice IS NULL OR OriginalPrice >= Price");
-                        });
+                    b.ToTable("ProductVariants", (string)null);
                 });
 
             modelBuilder.Entity("Catalog_Service.src._01_Domain.Core.Entities.Category", b =>
@@ -746,13 +689,18 @@ namespace Catalog_Service.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Catalog_Service.src._01_Domain.Core.Entities.Product", null)
-                        .WithMany("Images")
+                        .WithMany()
                         .HasForeignKey("ProductId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("Catalog_Service.src._01_Domain.Core.Entities.Product", null)
+                        .WithMany("Images")
+                        .HasForeignKey("ProductId1");
+
                     b.HasOne("Catalog_Service.src._01_Domain.Core.Entities.ProductReview", null)
                         .WithMany("Images")
-                        .HasForeignKey("ProductReviewId");
+                        .HasForeignKey("ProductReviewId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Catalog_Service.src._01_Domain.Core.Entities.ProductVariant", null)
                         .WithMany()
@@ -780,22 +728,21 @@ namespace Catalog_Service.Migrations
                                 .HasColumnType("int");
 
                             b1.Property<decimal>("Height")
-                                .HasColumnType("decimal(10,2)")
-                                .HasColumnName("Height");
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("Dimensions_Height");
 
                             b1.Property<decimal>("Length")
-                                .HasColumnType("decimal(10,2)")
-                                .HasColumnName("Length");
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("Dimensions_Length");
 
                             b1.Property<string>("Unit")
                                 .IsRequired()
-                                .HasMaxLength(10)
-                                .HasColumnType("nvarchar(10)")
-                                .HasColumnName("DimensionUnit");
+                                .HasColumnType("nvarchar(max)")
+                                .HasColumnName("Dimensions_Unit");
 
                             b1.Property<decimal>("Width")
-                                .HasColumnType("decimal(10,2)")
-                                .HasColumnName("Width");
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("Dimensions_Width");
 
                             b1.HasKey("ProductId");
 
@@ -812,13 +759,12 @@ namespace Catalog_Service.Migrations
 
                             b1.Property<string>("Unit")
                                 .IsRequired()
-                                .HasMaxLength(10)
-                                .HasColumnType("nvarchar(10)")
-                                .HasColumnName("WeightUnit");
+                                .HasColumnType("nvarchar(max)")
+                                .HasColumnName("Weight_Unit");
 
                             b1.Property<decimal>("Value")
-                                .HasColumnType("decimal(10,2)")
-                                .HasColumnName("WeightValue");
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("Weight_Value");
 
                             b1.HasKey("ProductId");
 
@@ -842,15 +788,23 @@ namespace Catalog_Service.Migrations
             modelBuilder.Entity("Catalog_Service.src._01_Domain.Core.Entities.ProductAttribute", b =>
                 {
                     b.HasOne("Catalog_Service.src._01_Domain.Core.Entities.Product", "Product")
-                        .WithMany("Attributes")
+                        .WithMany()
                         .HasForeignKey("ProductId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("Catalog_Service.src._01_Domain.Core.Entities.ProductVariant", "ProductVariant")
+                    b.HasOne("Catalog_Service.src._01_Domain.Core.Entities.Product", null)
                         .WithMany("Attributes")
+                        .HasForeignKey("ProductId1");
+
+                    b.HasOne("Catalog_Service.src._01_Domain.Core.Entities.ProductVariant", "ProductVariant")
+                        .WithMany()
                         .HasForeignKey("ProductVariantId")
                         .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Catalog_Service.src._01_Domain.Core.Entities.ProductVariant", null)
+                        .WithMany("Attributes")
+                        .HasForeignKey("ProductVariantId1");
 
                     b.Navigation("Product");
 
@@ -873,7 +827,7 @@ namespace Catalog_Service.Migrations
                     b.HasOne("Catalog_Service.src._01_Domain.Core.Entities.ProductReview", "ProductReview")
                         .WithMany("Replies")
                         .HasForeignKey("ProductReviewId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("ProductReview");
@@ -904,22 +858,21 @@ namespace Catalog_Service.Migrations
                                 .HasColumnType("int");
 
                             b1.Property<decimal>("Height")
-                                .HasColumnType("decimal(10,2)")
-                                .HasColumnName("Height");
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("Dimensions_Height");
 
                             b1.Property<decimal>("Length")
-                                .HasColumnType("decimal(10,2)")
-                                .HasColumnName("Length");
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("Dimensions_Length");
 
                             b1.Property<string>("Unit")
                                 .IsRequired()
-                                .HasMaxLength(10)
-                                .HasColumnType("nvarchar(10)")
-                                .HasColumnName("DimensionUnit");
+                                .HasColumnType("nvarchar(max)")
+                                .HasColumnName("Dimensions_Unit");
 
                             b1.Property<decimal>("Width")
-                                .HasColumnType("decimal(10,2)")
-                                .HasColumnName("Width");
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("Dimensions_Width");
 
                             b1.HasKey("ProductVariantId");
 
@@ -936,13 +889,12 @@ namespace Catalog_Service.Migrations
 
                             b1.Property<string>("Unit")
                                 .IsRequired()
-                                .HasMaxLength(10)
-                                .HasColumnType("nvarchar(10)")
-                                .HasColumnName("WeightUnit");
+                                .HasColumnType("nvarchar(max)")
+                                .HasColumnName("Weight_Unit");
 
                             b1.Property<decimal>("Value")
-                                .HasColumnType("decimal(10,2)")
-                                .HasColumnName("WeightValue");
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("Weight_Value");
 
                             b1.HasKey("ProductVariantId");
 

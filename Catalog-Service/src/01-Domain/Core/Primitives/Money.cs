@@ -1,9 +1,14 @@
-﻿namespace Catalog_Service.src._01_Domain.Core.Primitives
+﻿using System.Collections.Generic;
+
+namespace Catalog_Service.src._01_Domain.Core.Primitives
 {
     public class Money : ValueObject
     {
-        public decimal Amount { get; }
-        public string Currency { get; }
+        public decimal Amount { get; private set; }
+        public string Currency { get; private set; }
+
+        // Constructor بدون پارامتر برای EF Core
+        protected Money() { }
 
         private Money(decimal amount, string currency)
         {
@@ -72,7 +77,7 @@
         public bool IsLessThan(Money other)
         {
             if (Currency != other.Currency)
-                throw new InvalidOperationException("Cannot compare money with different currencies");
+                throw new InvalidOperationException("Cannot compare money with different different currencies");
 
             return Amount < other.Amount;
         }

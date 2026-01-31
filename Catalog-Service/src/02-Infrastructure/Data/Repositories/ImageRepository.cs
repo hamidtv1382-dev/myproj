@@ -403,6 +403,12 @@ namespace Catalog_Service.src._02_Infrastructure.Data.Repositories
             int maxHeight,
             CancellationToken cancellationToken = default)
         {
+            if (minWidth <= 0 || maxWidth <= 0 || minHeight <= 0 || maxHeight <= 0)
+                throw new ArgumentException("Dimensions must be greater than zero");
+
+            if (minWidth > maxWidth || minHeight > maxHeight)
+                throw new ArgumentException("Invalid size range");
+
             return await _dbContext.ImageResources
                 .Where(i => i.Width >= minWidth && i.Width <= maxWidth &&
                            i.Height >= minHeight && i.Height <= maxHeight && !i.IsDeleted)
@@ -414,6 +420,12 @@ namespace Catalog_Service.src._02_Infrastructure.Data.Repositories
             long maxSize,
             CancellationToken cancellationToken = default)
         {
+            if (minSize <= 0 || maxSize <= 0)
+                throw new ArgumentException("File sizes must be greater than zero");
+
+            if (minSize > maxSize)
+                throw new ArgumentException("Invalid file size range");
+
             return await _dbContext.ImageResources
                 .Where(i => i.FileSize >= minSize && i.FileSize <= maxSize && !i.IsDeleted)
                 .ToListAsync(cancellationToken);
@@ -423,6 +435,9 @@ namespace Catalog_Service.src._02_Infrastructure.Data.Repositories
             string extension,
             CancellationToken cancellationToken = default)
         {
+            if (string.IsNullOrWhiteSpace(extension))
+                throw new ArgumentException("Extension is required", nameof(extension));
+
             return await _dbContext.ImageResources
                 .Where(i => i.FileExtension.Equals(extension, StringComparison.OrdinalIgnoreCase) && !i.IsDeleted)
                 .ToListAsync(cancellationToken);

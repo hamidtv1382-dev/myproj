@@ -35,6 +35,9 @@ namespace Catalog_Service.src._01_Domain.Core.Entities
         public StockStatus StockStatus { get; private set; }
         public string CreatedByUserId { get; private set; }
 
+        // Shadow Property (Handled by EF Core in DbContext)
+        // public string? ImageUrl { get; set; } 
+
         // Navigation properties
         public Brand Brand { get; private set; }
         public Category Category { get; private set; }
@@ -194,13 +197,36 @@ namespace Catalog_Service.src._01_Domain.Core.Entities
 
         public void AddImage(ImageResource image)
         {
+            if (_images.Count >= 10)
+                throw new InvalidOperationException("A product cannot have more than 10 images.");
+
+            if (_images.Count == 0)
+            {
+                image.SetAsPrimary();
+            }
+            else if (image.IsPrimary)
+            {
+                foreach (var img in _images)
+                {
+                    img.RemoveAsPrimary();
+                }
+            }
+
             _images.Add(image);
             UpdatedAt = DateTime.UtcNow;
         }
 
         public void RemoveImage(ImageResource image)
         {
+            bool wasPrimary = image.IsPrimary;
+
             _images.Remove(image);
+
+            if (wasPrimary && _images.Any())
+            {
+                _images.First().SetAsPrimary();
+            }
+
             UpdatedAt = DateTime.UtcNow;
         }
 

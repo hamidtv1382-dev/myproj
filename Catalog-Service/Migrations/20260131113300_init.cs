@@ -76,8 +76,6 @@ namespace Catalog_Service.Migrations
                     Name = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
                     Description = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: false),
                     Slug = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    Price = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    OriginalPrice = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
                     Status = table.Column<int>(type: "int", nullable: false, defaultValue: 0),
                     BrandId = table.Column<int>(type: "int", nullable: false),
                     CategoryId = table.Column<int>(type: "int", nullable: false),
@@ -85,12 +83,12 @@ namespace Catalog_Service.Migrations
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
                     PublishedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    Length = table.Column<decimal>(type: "decimal(10,2)", nullable: false),
-                    Width = table.Column<decimal>(type: "decimal(10,2)", nullable: false),
-                    Height = table.Column<decimal>(type: "decimal(10,2)", nullable: false),
-                    DimensionUnit = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: false),
-                    WeightValue = table.Column<decimal>(type: "decimal(10,2)", nullable: false),
-                    WeightUnit = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: false),
+                    Dimensions_Length = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    Dimensions_Width = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    Dimensions_Height = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    Dimensions_Unit = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Weight_Value = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    Weight_Unit = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     IsFeatured = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
                     IsApproved = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
                     IsDeleted = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
@@ -139,7 +137,6 @@ namespace Catalog_Service.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_ProductReviews", x => x.Id);
-                    table.CheckConstraint("CK_ProductReview_ValidHelpfulVotes", "HelpfulVotes >= 0");
                     table.CheckConstraint("CK_ProductReview_ValidRating", "Rating >= 1 AND Rating <= 5");
                     table.ForeignKey(
                         name: "FK_ProductReviews_Products_ProductId",
@@ -184,12 +181,12 @@ namespace Catalog_Service.Migrations
                     OriginalPrice = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
                     StockQuantity = table.Column<int>(type: "int", nullable: false, defaultValue: 0),
                     StockStatus = table.Column<int>(type: "int", nullable: false, defaultValue: 1),
-                    Length = table.Column<decimal>(type: "decimal(10,2)", nullable: false),
-                    Width = table.Column<decimal>(type: "decimal(10,2)", nullable: false),
-                    Height = table.Column<decimal>(type: "decimal(10,2)", nullable: false),
-                    DimensionUnit = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: false),
-                    WeightValue = table.Column<decimal>(type: "decimal(10,2)", nullable: false),
-                    WeightUnit = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: false),
+                    Dimensions_Length = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    Dimensions_Width = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    Dimensions_Height = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    Dimensions_Unit = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Weight_Value = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    Weight_Unit = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     ImageUrl = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
@@ -199,7 +196,6 @@ namespace Catalog_Service.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_ProductVariants", x => x.Id);
-                    table.CheckConstraint("CK_ProductVariant_ValidOriginalPrice", "OriginalPrice IS NULL OR OriginalPrice >= Price");
                     table.ForeignKey(
                         name: "FK_ProductVariants_Products_ProductId",
                         column: x => x.ProductId,
@@ -215,8 +211,8 @@ namespace Catalog_Service.Migrations
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     ProductReviewId = table.Column<int>(type: "int", nullable: false),
-                    UserId = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Comment = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    UserId = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: false),
+                    Comment = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
@@ -228,7 +224,7 @@ namespace Catalog_Service.Migrations
                         column: x => x.ProductReviewId,
                         principalTable: "ProductReviews",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -254,13 +250,14 @@ namespace Catalog_Service.Migrations
                     BrandId = table.Column<int>(type: "int", nullable: true),
                     CategoryId = table.Column<int>(type: "int", nullable: true),
                     ProductId = table.Column<int>(type: "int", nullable: true),
+                    ProductId1 = table.Column<int>(type: "int", nullable: true),
                     ProductReviewId = table.Column<int>(type: "int", nullable: true),
                     ProductVariantId = table.Column<int>(type: "int", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_ImageResources", x => x.Id);
-                    table.CheckConstraint("CK_ImageResource_SingleEntityReference", "(ProductId IS NOT NULL AND CategoryId IS NULL AND BrandId IS NULL AND ProductVariantId IS NULL) OR (ProductId IS NULL AND CategoryId IS NOT NULL AND BrandId IS NULL AND ProductVariantId IS NULL) OR (ProductId IS NULL AND CategoryId IS NULL AND BrandId IS NOT NULL AND ProductVariantId IS NULL) OR (ProductId IS NULL AND CategoryId IS NULL AND BrandId IS NULL AND ProductVariantId IS NOT NULL)");
+                    table.CheckConstraint("CK_ImageResource_SingleEntityReference", "(ProductId IS NOT NULL AND CategoryId IS NULL AND BrandId IS NULL AND ProductVariantId IS NULL AND ProductReviewId IS NULL) OR (ProductId IS NULL AND CategoryId IS NOT NULL AND BrandId IS NULL AND ProductVariantId IS NULL AND ProductReviewId IS NULL) OR (ProductId IS NULL AND CategoryId IS NULL AND BrandId IS NOT NULL AND ProductVariantId IS NULL AND ProductReviewId IS NULL) OR (ProductId IS NULL AND CategoryId IS NULL AND BrandId IS NULL AND ProductVariantId IS NOT NULL AND ProductReviewId IS NULL) OR (ProductId IS NULL AND CategoryId IS NULL AND BrandId IS NULL AND ProductVariantId IS NULL AND ProductReviewId IS NOT NULL)");
                     table.ForeignKey(
                         name: "FK_ImageResources_Brands_BrandId",
                         column: x => x.BrandId,
@@ -277,7 +274,8 @@ namespace Catalog_Service.Migrations
                         name: "FK_ImageResources_ProductReviews_ProductReviewId",
                         column: x => x.ProductReviewId,
                         principalTable: "ProductReviews",
-                        principalColumn: "Id");
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_ImageResources_ProductVariants_ProductVariantId",
                         column: x => x.ProductVariantId,
@@ -290,6 +288,11 @@ namespace Catalog_Service.Migrations
                         principalTable: "Products",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_ImageResources_Products_ProductId1",
+                        column: x => x.ProductId1,
+                        principalTable: "Products",
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
@@ -305,7 +308,9 @@ namespace Catalog_Service.Migrations
                     IsVariantSpecific = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
                     IsDeleted = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ProductId1 = table.Column<int>(type: "int", nullable: true),
+                    ProductVariantId1 = table.Column<int>(type: "int", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -318,74 +323,77 @@ namespace Catalog_Service.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
+                        name: "FK_ProductAttributes_ProductVariants_ProductVariantId1",
+                        column: x => x.ProductVariantId1,
+                        principalTable: "ProductVariants",
+                        principalColumn: "Id");
+                    table.ForeignKey(
                         name: "FK_ProductAttributes_Products_ProductId",
                         column: x => x.ProductId,
                         principalTable: "Products",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_ProductAttributes_Products_ProductId1",
+                        column: x => x.ProductId1,
+                        principalTable: "Products",
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_Brand_IsActive",
+                name: "IX_Brands_IsActive",
                 table: "Brands",
                 column: "IsActive");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Brand_Slug",
+                name: "IX_Brands_Slug",
                 table: "Brands",
-                column: "Slug",
-                unique: true);
+                column: "Slug");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Category_DisplayOrder",
+                name: "IX_Categories_DisplayOrder",
                 table: "Categories",
                 column: "DisplayOrder");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Category_IsActive",
-                table: "Categories",
-                column: "IsActive");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Category_ParentCategoryId",
+                name: "IX_Categories_ParentCategoryId",
                 table: "Categories",
                 column: "ParentCategoryId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Category_Slug",
+                name: "IX_Categories_Slug",
                 table: "Categories",
-                column: "Slug",
-                unique: true);
+                column: "Slug");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ImageResource_BrandId",
+                name: "IX_ImageResources_BrandId",
                 table: "ImageResources",
                 column: "BrandId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ImageResource_CategoryId",
+                name: "IX_ImageResources_CategoryId",
                 table: "ImageResources",
                 column: "CategoryId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ImageResource_ImageType",
+                name: "IX_ImageResources_ImageType",
                 table: "ImageResources",
                 column: "ImageType");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ImageResource_IsPrimary",
+                name: "IX_ImageResources_IsPrimary",
                 table: "ImageResources",
                 column: "IsPrimary");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ImageResource_ProductId",
+                name: "IX_ImageResources_ProductId",
                 table: "ImageResources",
                 column: "ProductId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ImageResource_ProductVariantId",
+                name: "IX_ImageResources_ProductId1",
                 table: "ImageResources",
-                column: "ProductVariantId");
+                column: "ProductId1");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ImageResources_ProductReviewId",
@@ -393,24 +401,34 @@ namespace Catalog_Service.Migrations
                 column: "ProductReviewId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ProductAttribute_Name",
+                name: "IX_ImageResources_ProductVariantId",
+                table: "ImageResources",
+                column: "ProductVariantId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ProductAttributes_Name",
                 table: "ProductAttributes",
                 column: "Name");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ProductAttribute_ProductId",
+                name: "IX_ProductAttributes_ProductId",
                 table: "ProductAttributes",
                 column: "ProductId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ProductAttribute_ProductId_Name",
+                name: "IX_ProductAttributes_ProductId1",
                 table: "ProductAttributes",
-                columns: new[] { "ProductId", "Name" });
+                column: "ProductId1");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ProductAttribute_ProductVariantId",
+                name: "IX_ProductAttributes_ProductVariantId",
                 table: "ProductAttributes",
                 column: "ProductVariantId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ProductAttributes_ProductVariantId1",
+                table: "ProductAttributes",
+                column: "ProductVariantId1");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ProductReviewReplies_ProductReviewId",
@@ -418,132 +436,92 @@ namespace Catalog_Service.Migrations
                 column: "ProductReviewId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ProductReview_IsVerifiedPurchase",
-                table: "ProductReviews",
-                column: "IsVerifiedPurchase");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_ProductReview_ProductId",
+                name: "IX_ProductReviews_ProductId",
                 table: "ProductReviews",
                 column: "ProductId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ProductReview_ProductId_UserId",
+                name: "IX_ProductReviews_ProductId_UserId",
                 table: "ProductReviews",
                 columns: new[] { "ProductId", "UserId" },
-                unique: true);
+                unique: true,
+                filter: "[IsDeleted] = 0");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ProductReview_Rating",
+                name: "IX_ProductReviews_Rating",
                 table: "ProductReviews",
                 column: "Rating");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ProductReview_Status",
+                name: "IX_ProductReviews_Status",
                 table: "ProductReviews",
                 column: "Status");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ProductReview_UserId",
+                name: "IX_ProductReviews_UserId",
                 table: "ProductReviews",
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Product_BrandId",
-                table: "Products",
-                column: "BrandId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Product_BrandId_CategoryId",
+                name: "IX_Products_BrandId_CategoryId",
                 table: "Products",
                 columns: new[] { "BrandId", "CategoryId" });
 
             migrationBuilder.CreateIndex(
-                name: "IX_Product_CategoryId",
+                name: "IX_Products_CategoryId",
                 table: "Products",
                 column: "CategoryId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Product_CreatedAt",
-                table: "Products",
-                column: "CreatedAt");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Product_IsFeatured",
-                table: "Products",
-                column: "IsFeatured");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Product_Name",
-                table: "Products",
-                column: "Name");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Product_Sku",
+                name: "IX_Products_Sku",
                 table: "Products",
                 column: "Sku",
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_Product_Slug",
+                name: "IX_Products_Slug",
                 table: "Products",
-                column: "Slug",
-                unique: true);
+                column: "Slug");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Product_Status",
-                table: "Products",
-                column: "Status");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Product_Status_IsFeatured",
+                name: "IX_Products_Status_IsFeatured",
                 table: "Products",
                 columns: new[] { "Status", "IsFeatured" });
 
             migrationBuilder.CreateIndex(
-                name: "IX_Product_StockStatus",
-                table: "Products",
-                column: "StockStatus");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Product_StockStatus_StockQuantity",
-                table: "Products",
-                columns: new[] { "StockStatus", "StockQuantity" });
-
-            migrationBuilder.CreateIndex(
-                name: "IX_ProductTag_ProductId",
+                name: "IX_ProductTags_ProductId",
                 table: "ProductTags",
                 column: "ProductId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ProductTag_ProductId_TagText",
+                name: "IX_ProductTags_ProductId_TagText",
                 table: "ProductTags",
                 columns: new[] { "ProductId", "TagText" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_ProductTag_TagText",
+                name: "IX_ProductTags_TagText",
                 table: "ProductTags",
                 column: "TagText");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ProductVariant_IsActive",
+                name: "IX_ProductVariants_IsActive",
                 table: "ProductVariants",
                 column: "IsActive");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ProductVariant_ProductId",
+                name: "IX_ProductVariants_ProductId",
                 table: "ProductVariants",
                 column: "ProductId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ProductVariant_Sku",
+                name: "IX_ProductVariants_Sku",
                 table: "ProductVariants",
                 column: "Sku",
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_ProductVariant_StockStatus",
+                name: "IX_ProductVariants_StockStatus",
                 table: "ProductVariants",
                 column: "StockStatus");
         }

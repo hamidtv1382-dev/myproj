@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 
 namespace Catalog_Service.src._03_Endpoints.DTOs.Requests.Vendor
 {
@@ -41,7 +42,9 @@ namespace Catalog_Service.src._03_Endpoints.DTOs.Requests.Vendor
         [StringLength(160, ErrorMessage = "Meta description cannot exceed 160 characters")]
         public string MetaDescription { get; set; }
 
-        public string? ImageUrl { get; set; }
+        // تغییر از string? به List<string> برای پشتیبانی از چندین تصویر
+        public List<string> ImageUrls { get; set; } = new List<string>();
+
         public decimal? OriginalPrice { get; set; }
     }
 }

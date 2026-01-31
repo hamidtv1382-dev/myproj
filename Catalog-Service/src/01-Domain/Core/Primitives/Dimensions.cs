@@ -1,11 +1,16 @@
-﻿namespace Catalog_Service.src._01_Domain.Core.Primitives
+﻿using System.Collections.Generic;
+
+namespace Catalog_Service.src._01_Domain.Core.Primitives
 {
     public class Dimensions : ValueObject
     {
-        public decimal Length { get; }
-        public decimal Width { get; }
-        public decimal Height { get; }
-        public string Unit { get; }
+        public decimal Length { get; private set; }
+        public decimal Width { get; private set; }
+        public decimal Height { get; private set; }
+        public string Unit { get; private set; }
+
+        // Constructor بدون پارامتر برای EF Core
+        protected Dimensions() { }
 
         private Dimensions(decimal length, decimal width, decimal height, string unit)
         {

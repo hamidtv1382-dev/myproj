@@ -1,4 +1,5 @@
 ﻿using Catalog_Service.src._01_Domain.Core.Enums;
+using System.Collections.Generic;
 
 namespace Catalog_Service.src._03_Endpoints.DTOs.Responses.Vendor
 {
@@ -20,6 +21,7 @@ namespace Catalog_Service.src._03_Endpoints.DTOs.Responses.Vendor
         public StockStatus StockStatus { get; set; }
         public bool IsFeatured { get; set; }
         public int ViewCount { get; set; }
+        // This property will hold the URL of the Primary image (first image)
         public string ImageUrl { get; set; }
         public VendorDimensionsResponse Dimensions { get; set; }
         public VendorWeightResponse Weight { get; set; }
@@ -29,6 +31,7 @@ namespace Catalog_Service.src._03_Endpoints.DTOs.Responses.Vendor
         public DateTime? UpdatedAt { get; set; }
         public DateTime? PublishedAt { get; set; }
         public List<VendorProductVariantResponse> Variants { get; set; } = new();
+        // This list contains all associated images
         public List<VendorProductImageResponse> Images { get; set; } = new();
         public List<VendorProductAttributeResponse> Attributes { get; set; } = new();
     }

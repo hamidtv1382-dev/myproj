@@ -24,6 +24,7 @@ namespace Catalog_Service.src._01_Domain.Core.Contracts.Repositories
         Task<IEnumerable<Product>> GetAllForAdminAsync(CancellationToken cancellationToken = default);
         Task SetApprovalStatusAsync(int productId, bool isApproved, CancellationToken cancellationToken = default);
         Task<Product> GetByIdVendorAsync(int id, CancellationToken cancellationToken = default);
+
         // متدهای جستجو و فیلتر
         Task<IEnumerable<Product>> GetByCategoryAsync(int categoryId, CancellationToken cancellationToken = default);
         Task<IEnumerable<Product>> GetByBrandAsync(int brandId, CancellationToken cancellationToken = default);

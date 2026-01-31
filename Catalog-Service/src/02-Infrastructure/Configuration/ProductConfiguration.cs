@@ -1,7 +1,6 @@
 ﻿using Catalog_Service.src._01_Domain.Core.Entities;
 using Catalog_Service.src._01_Domain.Core.Enums;
 using Catalog_Service.src._01_Domain.Core.Primitives;
-using Catalog_Service.src._02_Infrastructure.Data.Converters;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -13,18 +12,8 @@ namespace Catalog_Service.src._02_Infrastructure.Configuration
         {
             builder.ToTable("Products");
 
-            // تنظیمات کلید اصلی
             builder.HasKey(p => p.Id);
-            // تنظیمات مربوط به پراپرتی جدید IsDeleted
-            builder.Property(c => c.IsDeleted)
-                .IsRequired()
-                .HasDefaultValue(false);
-            // تنظیمات مربوط به پراپرتی جدید IsDeleted
-            builder.Property(c => c.IsApproved)
-                .IsRequired()
-                .HasDefaultValue(false);
 
-            // تنظیمات ویژگی‌ها
             builder.Property(p => p.Name)
                 .IsRequired()
                 .HasMaxLength(200);
@@ -54,16 +43,15 @@ namespace Catalog_Service.src._02_Infrastructure.Configuration
                 .IsRequired()
                 .HasDefaultValue(0);
 
-            builder.Property(p => p.CreatedAt)
-                .IsRequired();
-
-            builder.Property(p => p.UpdatedAt)
-                .IsRequired(false);
-
-            builder.Property(p => p.PublishedAt)
-                .IsRequired(false);
-
             builder.Property(p => p.IsFeatured)
+                .IsRequired()
+                .HasDefaultValue(false);
+
+            builder.Property(p => p.IsApproved)
+                .IsRequired()
+                .HasDefaultValue(false);
+
+            builder.Property(p => p.IsDeleted)
                 .IsRequired()
                 .HasDefaultValue(false);
 
@@ -81,18 +69,13 @@ namespace Catalog_Service.src._02_Infrastructure.Configuration
                 .IsRequired()
                 .HasDefaultValue(StockStatus.OutOfStock);
 
-            builder.Property(p => p.Price)
-                .HasConversion<MoneyConverter>();
-
-            builder.Property(p => p.OriginalPrice)
-                .HasConversion<MoneyConverter>();
-
             builder.Property(p => p.Slug)
                 .HasConversion(
                     slug => slug.Value,
-                    value => Slug.FromString(value));
+                    value => Slug.FromString(value))
+                .HasMaxLength(200);
 
-            // تنظیمات روابط
+            // Relationships
             builder.HasOne(p => p.Brand)
                 .WithMany(b => b.Products)
                 .HasForeignKey(p => p.BrandId)
@@ -103,7 +86,7 @@ namespace Catalog_Service.src._02_Infrastructure.Configuration
                 .HasForeignKey(p => p.CategoryId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // تنظیمات مجموعه‌ها
+            // Collections
             builder.HasMany(p => p.Variants)
                 .WithOne(v => v.Product)
                 .HasForeignKey(v => v.ProductId)
@@ -119,32 +102,22 @@ namespace Catalog_Service.src._02_Infrastructure.Configuration
                 .HasForeignKey(t => t.ProductId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            builder.HasMany(p => p.Images)
-                .WithOne() // ImageResource یک موجودیت مستقل است
-                .HasForeignKey("ProductId") // Shadow Property
-                .OnDelete(DeleteBehavior.Cascade);
-
             builder.HasMany(p => p.Attributes)
                 .WithOne(a => a.Product)
                 .HasForeignKey(a => a.ProductId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // تنظیمات ایندکس‌های اضافی
-            builder.HasIndex(p => new { p.BrandId, p.CategoryId })
-                .HasDatabaseName("IX_Product_BrandId_CategoryId");
+            // Images relationship is configured in ImageResourceConfiguration to avoid multiple cascade paths
+            builder.HasMany(p => p.Images)
+                .WithOne()
+                .HasForeignKey("ProductId")
+                .OnDelete(DeleteBehavior.Restrict);
 
-            builder.HasIndex(p => new { p.Status, p.IsFeatured })
-                .HasDatabaseName("IX_Product_Status_IsFeatured");
-
-            builder.HasIndex(p => new { p.StockStatus, p.StockQuantity })
-                .HasDatabaseName("IX_Product_StockStatus_StockQuantity");
-
-            // تنظیمات پیش‌فرض برای مقادیر اختیاری
-            builder.Property(p => p.MetaTitle).HasDefaultValue(null);
-            builder.Property(p => p.MetaDescription).HasDefaultValue(null);
-            builder.Property(p => p.OriginalPrice).HasDefaultValue(null);
-            builder.Property(p => p.PublishedAt).HasDefaultValue(null);
-            builder.Property(p => p.UpdatedAt).HasDefaultValue(null);
+            // Indexes
+            builder.HasIndex(p => new { p.BrandId, p.CategoryId });
+            builder.HasIndex(p => new { p.Status, p.IsFeatured });
+            builder.HasIndex(p => p.Sku).IsUnique();
+            builder.HasIndex(p => p.Slug);
         }
     }
 }

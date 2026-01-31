@@ -45,17 +45,14 @@ namespace Catalog_Service.src._01_Domain.Services
             _logger = logger;
         }
 
-        // تغییر نوع پارامتر به string?
         public async Task<Product> GetByIdAsync(int id, string? vendorUserId = null, CancellationToken cancellationToken = default)
         {
             Product product;
 
-            // شرط: اگر vendorUserId وجود داشت، از متد Admin استفاده کن
             if (!string.IsNullOrEmpty(vendorUserId))
             {
                 product = await _productRepository.GetByIdVendorAsync(id, cancellationToken);
 
-                // چک می‌کنیم که محصول متعلق به این فروشنده باشد
                 if (product == null)
                 {
                     _logger.LogWarning("Product with ID {ProductId} not found", id);
@@ -70,8 +67,6 @@ namespace Catalog_Service.src._01_Domain.Services
             }
             else
             {
-                // اگر vendorUserId وجود نداشت (کاربر عمومی)، از متد معمولی استفاده کن
-                // که IsApproved را چک می‌کند
                 product = await _productRepository.GetByIdAsync(id, cancellationToken);
 
                 if (product == null)
@@ -110,7 +105,20 @@ namespace Catalog_Service.src._01_Domain.Services
             return await _productRepository.GetAllForAdminAsync(cancellationToken);
         }
 
-        public async Task<Product> CreateAsync(string name, string description, Money price, int brandId, int categoryId, string sku, Dimensions dimensions, Weight weight, string createdByUserId, string? metaTitle = null, string? metaDescription = null, CancellationToken cancellationToken = default)
+        public async Task<Product> CreateAsync(
+            string name,
+            string description,
+            Money price,
+            int brandId,
+            int categoryId,
+            string sku,
+            Dimensions dimensions,
+            Weight weight,
+            string createdByUserId,
+            string? metaTitle = null,
+            string? metaDescription = null,
+            List<string>? imageUrls = null,
+            CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Product name is required", nameof(name));
@@ -140,14 +148,51 @@ namespace Catalog_Service.src._01_Domain.Services
             var slug = await _slugService.CreateUniqueSlugForProductAsync(name, null, cancellationToken);
             product.SetSlug(slug);
 
+            // --- NEW IMAGE LOGIC ---
+            if (imageUrls != null && imageUrls.Any())
+            {
+                int order = 0;
+                foreach (var url in imageUrls)
+                {
+                    var image = new ImageResource(
+                        originalFileName: System.IO.Path.GetFileName(url),
+                        fileExtension: System.IO.Path.GetExtension(url).TrimStart('.'),
+                        storagePath: url,
+                        publicUrl: url,
+                        fileSize: 0, // Placeholder
+                        width: 800,  // Placeholder
+                        height: 600, // Placeholder
+                        imageType: ImageType.Product,
+                        createdByUserId: createdByUserId,
+                        altText: name,
+                        isPrimary: (order == 0)
+                    );
+
+                    product.AddImage(image);
+                    order++;
+                }
+            }
+            // ---------------------
+
             product = await _productRepository.AddAsync(product, cancellationToken);
             await _productRepository.SaveChangesAsync(cancellationToken);
 
-            _logger.LogInformation("Created new product with ID {ProductId} and SKU {ProductSku}", product.Id, product.Sku);
+            _logger.LogInformation("Created new product with ID {ProductId}", product.Id);
             return product;
         }
 
-        public async Task UpdateAsync(int id, string name, string description, Money price, Money? originalPrice, Dimensions dimensions, Weight weight, string? metaTitle = null, string? metaDescription = null, CancellationToken cancellationToken = default)
+        public async Task UpdateAsync(
+            int id,
+            string name,
+            string description,
+            Money price,
+            Money? originalPrice,
+            Dimensions dimensions,
+            Weight weight,
+            string? metaTitle = null,
+            string? metaDescription = null,
+            List<string>? imageUrls = null,
+            CancellationToken cancellationToken = default)
         {
             var products = await _productRepository.GetAllForAdminAsync(cancellationToken);
             var product = products.FirstOrDefault(p => p.Id == id);
@@ -170,6 +215,36 @@ namespace Catalog_Service.src._01_Domain.Services
             }
 
             product.UpdateDetails(name, description, price, originalPrice, dimensions, weight, metaTitle, metaDescription);
+
+            // --- NEW IMAGE LOGIC (SYNCHRONIZATION) ---
+            var currentImages = product.Images.ToList();
+            foreach (var img in currentImages)
+            {
+                product.RemoveImage(img);
+            }
+
+            if (imageUrls != null)
+            {
+                int order = 0;
+                foreach (var url in imageUrls)
+                {
+                    var image = new ImageResource(
+                        originalFileName: System.IO.Path.GetFileName(url),
+                        fileExtension: System.IO.Path.GetExtension(url).TrimStart('.'),
+                        storagePath: url,
+                        publicUrl: url,
+                        fileSize: 0, width: 800, height: 600,
+                        imageType: ImageType.Product,
+                        createdByUserId: product.CreatedByUserId,
+                        altText: name,
+                        isPrimary: (order == 0)
+                    );
+                    product.AddImage(image);
+                    order++;
+                }
+            }
+            // -----------------------------
+
             _productRepository.Update(product);
             await _productRepository.SaveChangesAsync(cancellationToken);
 
@@ -180,21 +255,16 @@ namespace Catalog_Service.src._01_Domain.Services
         {
             Product product;
 
-            // اگر userId وارد شده است (حالت Vendor)، باید بدون بررسی IsApproved محصول را پیدا کنیم
             if (!string.IsNullOrEmpty(vendorUserId))
             {
-                // استفاده از متد خاص اددیتور که بدون شرط IsApproved کار می‌کند
-                // اما فقط مالکیت را در سرویس چک می‌کنیم
                 product = await _productRepository.GetByIdVendorAsync(id, cancellationToken);
 
-                // چک می‌کنیم که محصول وجود داشته باشد
                 if (product == null)
                 {
                     _logger.LogWarning("Product with ID {ProductId} not found", id);
                     throw new NotFoundException($"Product with ID {id} not found");
                 }
 
-                // چک می‌کنیم که آیا این محصول متعلق به همین فروشنده است یا خیر
                 if (product.CreatedByUserId != vendorUserId)
                 {
                     _logger.LogWarning("Vendor {VendorId} attempted to delete product {ProductId} which belongs to another user", vendorUserId, id);
@@ -203,8 +273,6 @@ namespace Catalog_Service.src._01_Domain.Services
             }
             else
             {
-                // برای ادمین یا کاربران عمومی (اگر نیاز بود)
-                // در حالت عادی معمولا ادمین از متدهای دیگر استفاده می‌کند
                 product = await _productRepository.GetByIdAsync(id, cancellationToken);
 
                 if (product == null)
@@ -214,12 +282,12 @@ namespace Catalog_Service.src._01_Domain.Services
                 }
             }
 
-            // حذف نرم (Soft Delete)
             _productRepository.Remove(product);
             await _productRepository.SaveChangesAsync(cancellationToken);
 
             _logger.LogInformation("Deleted product with ID {ProductId}", id);
         }
+
         public async Task<bool> ExistsAsync(int id, CancellationToken cancellationToken = default)
         {
             return await _productRepository.ExistsAsync(id, cancellationToken);
@@ -230,7 +298,6 @@ namespace Catalog_Service.src._01_Domain.Services
             return await _productRepository.ExistsBySkuAsync(sku, cancellationToken);
         }
 
-        // تغییر نوع پارامتر به string?
         public async Task<(IEnumerable<Product> Products, int TotalCount)> GetPagedAsync(int pageNumber, int pageSize, string searchTerm = null, int? categoryId = null, int? brandId = null, ProductStatus? status = null, decimal? minPrice = null, decimal? maxPrice = null, string sortBy = null, bool sortAscending = true, CancellationToken cancellationToken = default)
         {
             return await _productRepository.GetPagedAsync(pageNumber, pageSize, searchTerm, categoryId, brandId, status, minPrice, maxPrice, sortBy, sortAscending, cancellationToken);

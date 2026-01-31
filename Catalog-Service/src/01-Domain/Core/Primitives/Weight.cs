@@ -1,9 +1,14 @@
-﻿namespace Catalog_Service.src._01_Domain.Core.Primitives
+﻿using System.Collections.Generic;
+
+namespace Catalog_Service.src._01_Domain.Core.Primitives
 {
     public class Weight : ValueObject
     {
-        public decimal Value { get; }
-        public string Unit { get; }
+        public decimal Value { get; private set; }
+        public string Unit { get; private set; }
+
+        // Constructor بدون پارامتر برای EF Core
+        protected Weight() { }
 
         private Weight(decimal value, string unit)
         {

@@ -5,12 +5,8 @@ using Catalog_Service.src._01_Domain.Core.Primitives;
 using Catalog_Service.src._02_Infrastructure.Configuration;
 using Catalog_Service.src._02_Infrastructure.Data.Converters;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.ChangeTracking;
-using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.Extensions.Logging; // این using را اضافه کنید
-using System.Collections.Generic;
 using System.Linq;
-using System.Reflection.Emit;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -36,8 +32,12 @@ namespace Catalog_Service.src._02_Infrastructure.Data.Db
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
-            var moneyConverter = new MoneyConverter();
 
+            // 1. Ignore Money
+            modelBuilder.Ignore<Money>();
+
+            // 2. Money Converter
+            var moneyConverter = new MoneyConverter();
             foreach (var entityType in modelBuilder.Model.GetEntityTypes())
             {
                 foreach (var property in entityType.GetProperties())
@@ -48,237 +48,102 @@ namespace Catalog_Service.src._02_Infrastructure.Data.Db
                     }
                 }
             }
-            // اعمال تمام تنظیمات موجودیت‌ها
-            modelBuilder.ApplyConfiguration(new ProductConfiguration());
-            modelBuilder.ApplyConfiguration(new CategoryConfiguration());
-            modelBuilder.ApplyConfiguration(new BrandConfiguration());
-            modelBuilder.ApplyConfiguration(new ImageResourceConfiguration());
-            modelBuilder.ApplyConfiguration(new ProductVariantConfiguration());
-            modelBuilder.ApplyConfiguration(new ProductAttributeConfiguration());
-            modelBuilder.ApplyConfiguration(new ProductReviewConfiguration());
-            modelBuilder.ApplyConfiguration(new ProductTagConfiguration());
 
-            // تنظیمات جهانی برای Value Objects
-            ConfigureValueObjects(modelBuilder);
+            // 3. Owned Types
+            modelBuilder.Entity<Product>().OwnsOne(p => p.Dimensions, d =>
+            {
+                d.Property(p => p.Length).HasColumnName("Dimensions_Length");
+                d.Property(p => p.Width).HasColumnName("Dimensions_Width");
+                d.Property(p => p.Height).HasColumnName("Dimensions_Height");
+                d.Property(p => p.Unit).HasColumnName("Dimensions_Unit");
+            });
+            modelBuilder.Entity<Product>().OwnsOne(p => p.Weight, w =>
+            {
+                w.Property(p => p.Value).HasColumnName("Weight_Value");
+                w.Property(p => p.Unit).HasColumnName("Weight_Unit");
+            });
+            modelBuilder.Entity<ProductVariant>().OwnsOne(pv => pv.Dimensions, d =>
+            {
+                d.Property(p => p.Length).HasColumnName("Dimensions_Length");
+                d.Property(p => p.Width).HasColumnName("Dimensions_Width");
+                d.Property(p => p.Height).HasColumnName("Dimensions_Height");
+                d.Property(p => p.Unit).HasColumnName("Dimensions_Unit");
+            });
+            modelBuilder.Entity<ProductVariant>().OwnsOne(pv => pv.Weight, w =>
+            {
+                w.Property(p => p.Value).HasColumnName("Weight_Value");
+                w.Property(p => p.Unit).HasColumnName("Weight_Unit");
+            });
 
-            // فیلترهای سراسری برای موجودیت‌های نرم‌حذف شده
-            //ConfigureGlobalQueryFilters(modelBuilder);
+            // 4. Apply Configurations
+            modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
 
-            // ایندکس‌های سراسری
-            ConfigureGlobalIndexes(modelBuilder);
+            // =======================================================
+            // 5. OVERRIDE FINAL: اجبار به Restrict برای جلوگیری از خطا
+            // =======================================================
+
+            // ProductAttributes
+            modelBuilder.Entity<ProductAttribute>()
+                .HasOne(x => x.Product)
+                .WithMany()
+                .HasForeignKey(x => x.ProductId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<ProductAttribute>()
+                .HasOne(x => x.ProductVariant)
+                .WithMany()
+                .HasForeignKey(x => x.ProductVariantId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // ImageResources
+            modelBuilder.Entity<ImageResource>()
+                .HasOne<Product>()
+                .WithMany()
+                .HasForeignKey("ProductId")
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<ImageResource>()
+                .HasOne<ProductVariant>()
+                .WithMany()
+                .HasForeignKey("ProductVariantId")
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // ProductReviewReply
+            modelBuilder.Entity<ProductReviewReply>()
+                .HasOne(x => x.ProductReview)
+                .WithMany(x => x.Replies)
+                .HasForeignKey(x => x.ProductReviewId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // 6. Filters
+            ConfigureGlobalQueryFilters(modelBuilder);
         }
-
-        private void ConfigureValueObjects(ModelBuilder modelBuilder)
+        private void ConfigureGlobalQueryFilters(ModelBuilder modelBuilder)
         {
-            // تنظیمات برای Value Object: Money
             modelBuilder.Entity<Product>()
-                .Property(p => p.Price)
-                .HasColumnType("decimal(18,2)");
+                .HasQueryFilter(p => !p.IsDeleted);
 
-            modelBuilder.Entity<Product>()
-                .Property(p => p.OriginalPrice)
-                .HasColumnType("decimal(18,2)");
+            modelBuilder.Entity<ImageResource>()
+                .HasQueryFilter(i => !i.IsDeleted);
 
-            modelBuilder.Entity<ProductVariant>()
-                .Property(p => p.Price)
-                .HasColumnType("decimal(18,2)");
+            modelBuilder.Entity<ProductAttribute>()
+                .HasQueryFilter(pa => !pa.IsDeleted);
 
-            modelBuilder.Entity<ProductVariant>()
-                .Property(p => p.OriginalPrice)
-                .HasColumnType("decimal(18,2)");
+            modelBuilder.Entity<ProductReview>()
+                 .HasQueryFilter(pr => !pr.IsDeleted);
 
-            // تنظیمات برای Value Object: Slug
-            modelBuilder.Entity<Product>()
-                .Property(p => p.Slug)
-                .HasMaxLength(200);
+            modelBuilder.Entity<ProductTag>()
+                 .HasQueryFilter(pt => !pt.IsDeleted);
 
-            modelBuilder.Entity<Category>()
-                .Property(c => c.Slug)
-                .HasMaxLength(200);
-
-            modelBuilder.Entity<Brand>()
-                .Property(b => b.Slug)
-                .HasMaxLength(200);
-            modelBuilder.Entity<Product>()
-                .Property(p => p.Slug)
-                .HasMaxLength(200);
-
-            modelBuilder.Entity<Category>()
-                .Property(c => c.Slug)
-                .HasMaxLength(200);
-
-            modelBuilder.Entity<Brand>()
-                .Property(b => b.Slug)
-                .HasMaxLength(200);
-
-            // تنظیمات برای Value Object: Dimensions
-            modelBuilder.Entity<Product>()
-                .OwnsOne(p => p.Dimensions, d =>
-                {
-                    d.Property(dim => dim.Length).HasColumnName("Length").HasColumnType("decimal(10,2)");
-                    d.Property(dim => dim.Width).HasColumnName("Width").HasColumnType("decimal(10,2)");
-                    d.Property(dim => dim.Height).HasColumnName("Height").HasColumnType("decimal(10,2)");
-                    d.Property(dim => dim.Unit).HasColumnName("DimensionUnit").HasMaxLength(10);
-                });
-
-            modelBuilder.Entity<ProductVariant>()
-                .OwnsOne(p => p.Dimensions, d =>
-                {
-                    d.Property(dim => dim.Length).HasColumnName("Length").HasColumnType("decimal(10,2)");
-                    d.Property(dim => dim.Width).HasColumnName("Width").HasColumnType("decimal(10,2)");
-                    d.Property(dim => dim.Height).HasColumnName("Height").HasColumnType("decimal(10,2)");
-                    d.Property(dim => dim.Unit).HasColumnName("DimensionUnit").HasMaxLength(10);
-                });
-
-            // تنظیمات برای Value Object: Weight
-            modelBuilder.Entity<Product>()
-                .OwnsOne(p => p.Weight, w =>
-                {
-                    w.Property(weight => weight.Value).HasColumnName("WeightValue").HasColumnType("decimal(10,2)");
-                    w.Property(weight => weight.Unit).HasColumnName("WeightUnit").HasMaxLength(10);
-                });
-
-            modelBuilder.Entity<ProductVariant>()
-                .OwnsOne(p => p.Weight, w =>
-                {
-                    w.Property(weight => weight.Value).HasColumnName("WeightValue").HasColumnType("decimal(10,2)");
-                    w.Property(weight => weight.Unit).HasColumnName("WeightUnit").HasMaxLength(10);
-                });
+            // برای Brand و Category طبق نیازتان می‌توانید IsActive را فیلتر کنید
+            // modelBuilder.Entity<Category>().HasQueryFilter(c => c.IsActive);
         }
 
-        //private void ConfigureGlobalQueryFilters(ModelBuilder modelBuilder)
-        //{
-        //    // فیلتر برای دسترسی به دسته‌بندی‌های فعال
-        //    modelBuilder.Entity<Category>()
-        //        .HasQueryFilter(c => c.IsActive);
-
-        //    // فیلتر برای دسترسی به برندهای فعال
-        //    modelBuilder.Entity<Brand>()
-        //        .HasQueryFilter(b => b.IsActive);
-
-        //    // فیلتر برای دسترسی به محصولات منتشر شده
-        //    //modelBuilder.Entity<Product>()
-        //    //    .HasQueryFilter(p => p.Status == ProductStatus.Published);
-
-        //    // فیلتر برای دسترسی به محصولات منتشر شده
-        //    modelBuilder.Entity<ProductVariant>()
-        //        .HasQueryFilter(pv => pv.IsActive);
-        //}
-
-        private void ConfigureGlobalIndexes(ModelBuilder modelBuilder)
-        {
-            // ایندکس برای بهینه‌سازی جستجو بر اساس نام محصول
-            modelBuilder.Entity<Product>()
-                .HasIndex(p => p.Name)
-                .HasDatabaseName("IX_Product_Name");
-
-            // ایندکس برای بهینه‌سازی جستجو بر اساس Slug
-            modelBuilder.Entity<Product>()
-                .HasIndex(p => p.Slug)
-                .IsUnique()
-                .HasDatabaseName("IX_Product_Slug");
-
-            modelBuilder.Entity<Category>()
-                .HasIndex(c => c.Slug)
-                .IsUnique()
-                .HasDatabaseName("IX_Category_Slug");
-
-            modelBuilder.Entity<Brand>()
-                .HasIndex(b => b.Slug)
-                .IsUnique()
-                .HasDatabaseName("IX_Brand_Slug");
-
-            // ایندکس برای بهینه‌سازی جستجو بر اساس SKU
-            modelBuilder.Entity<Product>()
-                .HasIndex(p => p.Sku)
-                .IsUnique()
-                .HasDatabaseName("IX_Product_Sku");
-
-            modelBuilder.Entity<ProductVariant>()
-                .HasIndex(pv => pv.Sku)
-                .IsUnique()
-                .HasDatabaseName("IX_ProductVariant_Sku");
-
-            // ایندکس برای بهینه‌سازی جستجو بر اساس دسته‌بندی
-            modelBuilder.Entity<Product>()
-                .HasIndex(p => p.CategoryId)
-                .HasDatabaseName("IX_Product_CategoryId");
-
-            // ایندکس برای بهینه‌سازی جستجو بر اساس برند
-            modelBuilder.Entity<Product>()
-                .HasIndex(p => p.BrandId)
-                .HasDatabaseName("IX_Product_BrandId");
-
-            // ایندکس برای بهینه‌سازی جستجو بر اساس وضعیت موجودی
-            modelBuilder.Entity<Product>()
-                .HasIndex(p => p.StockStatus)
-                .HasDatabaseName("IX_Product_StockStatus");
-
-            // ایندکس برای بهینه‌سازی جستجو بر اساس وضعیت محصول
-            modelBuilder.Entity<Product>()
-                .HasIndex(p => p.Status)
-                .HasDatabaseName("IX_Product_Status");
-
-            // ایندکس برای بهینه‌سازی جستجو بر اساس محصولات ویژه
-            modelBuilder.Entity<Product>()
-                .HasIndex(p => p.IsFeatured)
-                .HasDatabaseName("IX_Product_IsFeatured");
-
-            // ایندکس برای بهینه‌سازی جستجو بر اساس تاریخ ایجاد
-            modelBuilder.Entity<Product>()
-                .HasIndex(p => p.CreatedAt)
-                .HasDatabaseName("IX_Product_CreatedAt");
-
-            // ایندکس برای بهینه‌سازی جستجو بر اساس امتیاز بازبینی
-            modelBuilder.Entity<ProductReview>()
-                .HasIndex(pr => pr.Rating)
-                .HasDatabaseName("IX_ProductReview_Rating");
-
-            // ایندکس برای بهینه‌سازی جستجو بر اساس وضعیت بازبینی
-            modelBuilder.Entity<ProductReview>()
-                .HasIndex(pr => pr.Status)
-                .HasDatabaseName("IX_ProductReview_Status");
-        }
-
-        // *** این متد را با نسخه تشخیصی جایگزین کنید ***
         public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
-            // مدیریت خودکار Timestamp برای موجودیت‌ها
             UpdateTimestamps();
-
-            // پردازش رویدادهای دامنه
             await ProcessDomainEventsAsync(cancellationToken);
-
-            // *** بخش تشخیصی برای پیدا کردن مشکل CHECK Constraint ***
-            var logger = this.GetService<ILogger<AppDbContext>>();
-            var addedOrModifiedEntries = ChangeTracker.Entries()
-                .Where(e => e.State == EntityState.Added || e.State == EntityState.Modified);
-
-            foreach (var entry in addedOrModifiedEntries)
-            {
-                if (entry.Entity is Brand brandEntity)
-                {
-                    var websiteUrlProperty = entry.Property("WebsiteUrl");
-                    var websiteUrlValue = websiteUrlProperty.CurrentValue?.ToString() ?? "NULL";
-                    logger.LogWarning("DIAGNOSTIC: Attempting to save Brand '{BrandName}' with WebsiteUrl: '{WebsiteUrl}'", brandEntity.Name, websiteUrlValue);
-                }
-            }
-            // *** پایان بخش تشخیصی ***
-
-            try
-            {
-                return await base.SaveChangesAsync(cancellationToken);
-            }
-            catch (DbUpdateException ex)
-            {
-                logger.LogError(ex, "Database update failed. See inner exception for details.");
-                // می‌توانید جزئیات بیشتری از خطا را اینجا لاگ کنید
-                if (ex.InnerException != null)
-                {
-                    logger.LogError("Inner Exception: {InnerExceptionMessage}", ex.InnerException.Message);
-                }
-                throw; // دوباره خطا را پرتاب کنید تا به لایه بالاتر برسد
-            }
+            return await base.SaveChangesAsync(cancellationToken);
         }
 
         private void UpdateTimestamps()
@@ -289,7 +154,6 @@ namespace Catalog_Service.src._02_Infrastructure.Data.Db
             {
                 if (entry.State == EntityState.Added)
                 {
-                    // برای موجودیت‌های جدید، CreatedAt تنظیم می‌شود
                     if (entry.Property("CreatedAt") != null && entry.Property("CreatedAt").CurrentValue == null)
                     {
                         entry.Property("CreatedAt").CurrentValue = DateTime.UtcNow;
@@ -297,8 +161,13 @@ namespace Catalog_Service.src._02_Infrastructure.Data.Db
                 }
                 else if (entry.State == EntityState.Modified)
                 {
-                    // برای موجودیت‌های ویرایش شده، UpdatedAt به‌روزرسانی می‌شود
-                    if (entry.Property("UpdatedAt") != null)
+                    // برای Soft Delete هم UpdatedAt آپدیت شود
+                    if (entry.Property("IsDeleted") != null && entry.Property("IsDeleted").IsModified && (bool)entry.Property("IsDeleted").CurrentValue == true)
+                    {
+                        entry.Property("UpdatedAt").CurrentValue = DateTime.UtcNow;
+                    }
+
+                    if (entry.Property("UpdatedAt") != null && entry.Property("IsDeleted") == null)
                     {
                         entry.Property("UpdatedAt").CurrentValue = DateTime.UtcNow;
                     }
@@ -316,15 +185,13 @@ namespace Catalog_Service.src._02_Infrastructure.Data.Db
                 .SelectMany(x => x.Entity.DomainEvents)
                 .ToList();
 
-            // پاک کردن رویدادها از موجودیت‌ها
             domainEntities.ForEach(entity => entity.Entity.ClearDomainEvents());
 
-            // پردازش رویدادها (در اینجا می‌توانید رویدادها را به یک سرویس پیام‌رسان ارسال کنید)
-            foreach (var domainEvent in domainEvents)
-            {
-                // در اینجا می‌توانید رویدادها را پردازش کنید
-                // برای مثال: await _mediator.Publish(domainEvent, cancellationToken);
-            }
+            // ارسال رویدادها به Mediator یا MessageBus
+            // foreach (var domainEvent in domainEvents)
+            // {
+            //     await _mediator.Publish(domainEvent, cancellationToken);
+            // }
         }
     }
 }

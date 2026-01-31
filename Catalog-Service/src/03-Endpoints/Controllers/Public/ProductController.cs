@@ -40,7 +40,7 @@ namespace Catalog_Service.src._03_Endpoints.Controllers.Public
         [HttpGet]
         public async Task<ActionResult<PagedResponse<ProductResponse>>> SearchProducts(
             [FromQuery] ProductSearchRequest request,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken)
         {
             await _searchValidator.ValidateAndThrowAsync(request, cancellationToken);
 
@@ -72,7 +72,7 @@ namespace Catalog_Service.src._03_Endpoints.Controllers.Public
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<ProductResponse>> GetProduct(int id, CancellationToken cancellationToken = default)
+        public async Task<ActionResult<ProductResponse>> GetProduct(int id, CancellationToken cancellationToken)
         {
             var product = await _productService.GetByIdAsync(id, null, cancellationToken); // vendorUserId: null
             if (product == null || product.Status != ProductStatus.Published)
@@ -87,7 +87,7 @@ namespace Catalog_Service.src._03_Endpoints.Controllers.Public
         [HttpGet("{id}/variants")]
         public async Task<ActionResult<IEnumerable<ProductVariantResponse>>> GetProductVariants(
             int id,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken)
         {
             var product = await _productService.GetByIdAsync(id, null, cancellationToken); // vendorUserId: null
             if (product == null || product.Status != ProductStatus.Published)
@@ -102,7 +102,7 @@ namespace Catalog_Service.src._03_Endpoints.Controllers.Public
         public async Task<ActionResult<PagedResponse<ProductReviewResponse>>> GetProductReviews(
             int id,
             [FromQuery] ProductReviewSearchRequest request,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken)
         {
             var product = await _productService.GetByIdAsync(id, null, cancellationToken); // vendorUserId: null
             if (product == null || product.Status != ProductStatus.Published)
@@ -136,7 +136,7 @@ namespace Catalog_Service.src._03_Endpoints.Controllers.Public
         }
 
         [HttpGet("{id}/stats")]
-        public async Task<ActionResult<ProductStatsResponse>> GetProductStats(int id, CancellationToken cancellationToken = default)
+        public async Task<ActionResult<ProductStatsResponse>> GetProductStats(int id, CancellationToken cancellationToken)
         {
             var product = await _productService.GetByIdAsync(id, null, cancellationToken); // vendorUserId: null
             if (product == null || product.Status != ProductStatus.Published)
@@ -160,8 +160,8 @@ namespace Catalog_Service.src._03_Endpoints.Controllers.Public
 
         [HttpGet("featured")]
         public async Task<ActionResult<IEnumerable<ProductResponse>>> GetFeaturedProducts(
-            [FromQuery] int count = 10,
-            CancellationToken cancellationToken = default)
+         CancellationToken cancellationToken,
+         [FromQuery] int count = 10)
         {
             var products = await _productService.GetFeaturedProductsAsync(count, cancellationToken);
             var productResponses = _mapper.Map<IEnumerable<ProductResponse>>(products);
@@ -170,8 +170,8 @@ namespace Catalog_Service.src._03_Endpoints.Controllers.Public
 
         [HttpGet("newest")]
         public async Task<ActionResult<IEnumerable<ProductResponse>>> GetNewestProducts(
-            [FromQuery] int count = 10,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken,
+            [FromQuery] int count = 10)
         {
             var products = await _productService.GetNewestProductsAsync(count, cancellationToken);
             var productResponses = _mapper.Map<IEnumerable<ProductResponse>>(products);
@@ -180,8 +180,8 @@ namespace Catalog_Service.src._03_Endpoints.Controllers.Public
 
         [HttpGet("bestselling")]
         public async Task<ActionResult<IEnumerable<ProductResponse>>> GetBestSellingProducts(
-            [FromQuery] int count = 10,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken,
+            [FromQuery] int count = 10)
         {
             var products = await _productService.GetBestSellingProductsAsync(count, cancellationToken);
             var productResponses = _mapper.Map<IEnumerable<ProductResponse>>(products);
@@ -191,8 +191,8 @@ namespace Catalog_Service.src._03_Endpoints.Controllers.Public
         [HttpGet("by-category/{categoryId}")]
         public async Task<ActionResult<IEnumerable<ProductResponse>>> GetProductsByCategory(
             int categoryId,
-            [FromQuery] int count = 20,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken,
+            [FromQuery] int count = 20)
         {
             var products = await _productService.GetByCategoryAsync(categoryId, cancellationToken);
             var productResponses = _mapper.Map<IEnumerable<ProductResponse>>(products.Take(count));
@@ -202,29 +202,28 @@ namespace Catalog_Service.src._03_Endpoints.Controllers.Public
         [HttpGet("by-brand/{brandId}")]
         public async Task<ActionResult<IEnumerable<ProductResponse>>> GetProductsByBrand(
             int brandId,
-            [FromQuery] int count = 20,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken,
+            [FromQuery] int count = 20)
         {
             var products = await _productService.GetByBrandAsync(brandId, cancellationToken);
             var productResponses = _mapper.Map<IEnumerable<ProductResponse>>(products.Take(count));
             return Ok(productResponses);
         }
-    }
+        public class ProductReviewSearchRequest
+        {
+            public int PageNumber { get; set; } = 1;
+            public int PageSize { get; set; } = 10;
+            public string SortBy { get; set; } = "date";
+            public bool SortAscending { get; set; } = false;
+        }
 
-    public class ProductReviewSearchRequest
-    {
-        public int PageNumber { get; set; } = 1;
-        public int PageSize { get; set; } = 10;
-        public string SortBy { get; set; } = "date";
-        public bool SortAscending { get; set; } = false;
-    }
-
-    public class ProductStatsResponse
-    {
-        public double AverageRating { get; set; }
-        public int TotalReviews { get; set; }
-        public IDictionary<int, int> RatingDistribution { get; set; }
-        public decimal MinPrice { get; set; }
-        public decimal MaxPrice { get; set; }
+        public class ProductStatsResponse
+        {
+            public double AverageRating { get; set; }
+            public int TotalReviews { get; set; }
+            public IDictionary<int, int> RatingDistribution { get; set; }
+            public decimal MinPrice { get; set; }
+            public decimal MaxPrice { get; set; }
+        }
     }
 }

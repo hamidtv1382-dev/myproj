@@ -2,6 +2,7 @@
 using Catalog_Service.src._01_Domain.Core.Contracts.Repositories;
 using Catalog_Service.src._01_Domain.Core.Contracts.Services;
 using Catalog_Service.src._01_Domain.Services;
+using Catalog_Service.src._02_Infrastructure;
 using Catalog_Service.src._02_Infrastructure.Caching;
 using Catalog_Service.src._02_Infrastructure.Data.Db;
 using Catalog_Service.src._02_Infrastructure.Data.Repositories;
@@ -94,6 +95,8 @@ namespace Catalog_Service.src.CrossCutting.Extensions
 
             services.AddAutoMapper(cfg =>
             {
+                cfg.AddProfile<MappingProfile>();
+
                 cfg.AddProfile<AdminMappingProfile>();
                 cfg.AddProfile<VendorMappingProfile>();
                 cfg.AddProfile<PublicMappingProfile>();

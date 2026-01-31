@@ -11,20 +11,14 @@ namespace Catalog_Service.src._02_Infrastructure.Configuration
         {
             builder.ToTable("ProductReviews");
 
-            // تنظیمات کلید اصلی
             builder.HasKey(pr => pr.Id);
 
-            // تنظیمات ویژگی‌ها
             builder.Property(pr => pr.ProductId)
                 .IsRequired();
-            // تنظیمات مربوط به پراپرتی جدید IsDeleted
-            builder.Property(c => c.IsDeleted)
-                .IsRequired()
-                .HasDefaultValue(false);
 
             builder.Property(pr => pr.UserId)
                 .IsRequired()
-                .HasMaxLength(450); // طول استاندارد برای ASP.NET Core Identity
+                .HasMaxLength(450);
 
             builder.Property(pr => pr.Title)
                 .IsRequired()
@@ -41,11 +35,9 @@ namespace Catalog_Service.src._02_Infrastructure.Configuration
                 .IsRequired()
                 .HasDefaultValue(ReviewStatus.Pending);
 
-            builder.Property(pr => pr.CreatedAt)
-                .IsRequired();
-
-            builder.Property(pr => pr.UpdatedAt)
-                .IsRequired(false);
+            builder.Property(pr => pr.IsDeleted)
+                .IsRequired()
+                .HasDefaultValue(false);
 
             builder.Property(pr => pr.IsVerifiedPurchase)
                 .IsRequired()
@@ -55,42 +47,31 @@ namespace Catalog_Service.src._02_Infrastructure.Configuration
                 .IsRequired()
                 .HasDefaultValue(0);
 
-            // تنظیمات روابط
+            // Relationship with Product
             builder.HasOne(pr => pr.Product)
                 .WithMany(p => p.Reviews)
                 .HasForeignKey(pr => pr.ProductId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Cascade); // این می‌تواند Cascade باشد
 
-            // تنظیمات ایندکس‌های اضافی
-            builder.HasIndex(pr => pr.ProductId)
-                .HasDatabaseName("IX_ProductReview_ProductId");
+            // Relationships for Replies and Images -> تغییر به Restrict
+            builder.HasMany(pr => pr.Replies)
+                .WithOne()
+                .HasForeignKey(r => r.ProductReviewId)
+                .OnDelete(DeleteBehavior.Restrict);
 
-            builder.HasIndex(pr => pr.UserId)
-                .HasDatabaseName("IX_ProductReview_UserId");
+            // Images relationship is handled in ImageResourceConfiguration, 
+            // but ensuring consistency here if navigation is used.
 
-            builder.HasIndex(pr => pr.Rating)
-                .HasDatabaseName("IX_ProductReview_Rating");
-
-            builder.HasIndex(pr => pr.Status)
-                .HasDatabaseName("IX_ProductReview_Status");
-
-            builder.HasIndex(pr => pr.IsVerifiedPurchase)
-                .HasDatabaseName("IX_ProductReview_IsVerifiedPurchase");
+            builder.HasIndex(pr => pr.ProductId);
+            builder.HasIndex(pr => pr.UserId);
+            builder.HasIndex(pr => pr.Rating);
+            builder.HasIndex(pr => pr.Status);
 
             builder.HasIndex(pr => new { pr.ProductId, pr.UserId })
                 .IsUnique()
-                .HasDatabaseName("IX_ProductReview_ProductId_UserId");
+                .HasFilter("[IsDeleted] = 0");
 
-            // تنظیمات پیش‌فرض برای مقادیر اختیاری
-            builder.Property(pr => pr.UpdatedAt).HasDefaultValue(null);
-
-            // محدوده مجاز برای امتیاز
-            builder.HasCheckConstraint("CK_ProductReview_ValidRating",
-                "Rating >= 1 AND Rating <= 5");
-
-            // محدوده مجاز برای تعداد رای‌های مفید
-            builder.HasCheckConstraint("CK_ProductReview_ValidHelpfulVotes",
-                "HelpfulVotes >= 0");
+            builder.HasCheckConstraint("CK_ProductReview_ValidRating", "Rating >= 1 AND Rating <= 5");
         }
     }
 }

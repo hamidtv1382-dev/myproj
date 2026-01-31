@@ -11,10 +11,8 @@ namespace Catalog_Service.src._02_Infrastructure.Configuration
         {
             builder.ToTable("Brands");
 
-            // تنظیمات کلید اصلی
             builder.HasKey(b => b.Id);
 
-            // تنظیمات ویژگی‌ها
             builder.Property(b => b.Name)
                 .IsRequired()
                 .HasMaxLength(100);
@@ -30,7 +28,6 @@ namespace Catalog_Service.src._02_Infrastructure.Configuration
                 .IsRequired()
                 .HasDefaultValue(true);
 
-            // تنظیمات مربوط به پراپرتی جدید IsDeleted
             builder.Property(b => b.IsDeleted)
                 .IsRequired()
                 .HasDefaultValue(false);
@@ -56,24 +53,11 @@ namespace Catalog_Service.src._02_Infrastructure.Configuration
             builder.Property(b => b.Slug)
                 .HasConversion(
                  slug => slug.Value,
-                 value => Slug.FromString(value));
+                 value => Slug.FromString(value))
+                .HasMaxLength(200);
 
-            // تنظیمات مجموعه‌ها
-            builder.HasMany(b => b.Products)
-                .WithOne(p => p.Brand)
-                .HasForeignKey(p => p.BrandId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            // تنظیمات ایندکس‌های اضافی
-            builder.HasIndex(b => b.IsActive)
-                .HasDatabaseName("IX_Brand_IsActive");
-
-            // تنظیمات پیش‌فرض برای مقادیر اختیاری
-            builder.Property(b => b.LogoUrl).HasDefaultValue(null);
-            builder.Property(b => b.WebsiteUrl).HasDefaultValue(null);
-            builder.Property(b => b.MetaTitle).HasDefaultValue(null);
-            builder.Property(b => b.MetaDescription).HasDefaultValue(null);
-            builder.Property(b => b.UpdatedAt).HasDefaultValue(null);
+            builder.HasIndex(b => b.IsActive);
+            builder.HasIndex(b => b.Slug);
         }
     }
 }

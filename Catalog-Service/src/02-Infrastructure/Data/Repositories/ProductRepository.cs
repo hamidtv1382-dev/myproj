@@ -34,6 +34,7 @@ namespace Catalog_Service.src._02_Infrastructure.Data.Repositories
                 .Include(p => p.Tags)
                 .FirstOrDefaultAsync(p => p.Id == id && !p.IsDeleted && p.IsApproved, cancellationToken);
         }
+
         public async Task<Product> GetByIdVendorAsync(int id, CancellationToken cancellationToken = default)
         {
             return await _dbContext.Products
@@ -46,6 +47,7 @@ namespace Catalog_Service.src._02_Infrastructure.Data.Repositories
                 .Include(p => p.Tags)
                 .FirstOrDefaultAsync(p => p.Id == id && !p.IsDeleted, cancellationToken);
         }
+
         public async Task<Product?> GetBySkuAsync(string sku, CancellationToken cancellationToken = default)
         {
             return await _dbContext.Products
@@ -240,6 +242,7 @@ namespace Catalog_Service.src._02_Infrastructure.Data.Repositories
                 .Where(p => !p.IsDeleted && p.IsApproved)
                 .Include(p => p.Brand)
                 .Include(p => p.Category)
+                .Include(p => p.Images)
                 .Include(p => p.Reviews)
                 .AsQueryable();
 
@@ -367,7 +370,6 @@ namespace Catalog_Service.src._02_Infrastructure.Data.Repositories
                 await _dbContext.SaveChangesAsync(cancellationToken);
             }
         }
-
 
         public async Task UpdateStockStatusAsync(int productId, StockStatus status, CancellationToken cancellationToken = default)
         {

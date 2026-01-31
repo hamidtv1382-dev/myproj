@@ -16,7 +16,7 @@ namespace Catalog_Service.src._03_Endpoints.Controllers.Vendor
 {
     [ApiController]
     [Route("api/vendor/products")]
-    [Authorize(Roles = RoleConstants.Vendor)]
+    [Authorize(Roles = $"{RoleConstants.SuperAdministrator},{RoleConstants.Vendor}")]
     public class VendorProductController : ControllerBase
     {
         private readonly IProductService _productService;
@@ -115,15 +115,13 @@ namespace Catalog_Service.src._03_Endpoints.Controllers.Vendor
                 throw new DuplicateEntityException($"A product with SKU '{request.Sku}' already exists.");
             }
 
-            // ساخت آبجکت Money برای قیمت اصلی در صورت وجود
             Money? originalPriceMoney = null;
             if (request.OriginalPrice.HasValue)
             {
                 originalPriceMoney = Money.Create(request.OriginalPrice.Value, "USD");
             }
 
-            // ایجاد محصول در یک مرحله (شامل OriginalPrice اگر وجود داشته باشد)
-            // این روش باعث جلوگیری از خطای DbUpdateException هنگام آپدیت مجدد می‌شود
+            // Updated CreateAsync call to include request.ImageUrls
             var product = await _productService.CreateAsync(
                 request.Name,
                 request.Description,
@@ -136,6 +134,7 @@ namespace Catalog_Service.src._03_Endpoints.Controllers.Vendor
                 vendorUserId,
                 request.MetaTitle,
                 request.MetaDescription,
+                request.ImageUrls, // PASS THE LIST OF IMAGE URLS
                 cancellationToken);
 
             var productResponse = _mapper.Map<VendorProductResponse>(product);
@@ -161,6 +160,7 @@ namespace Catalog_Service.src._03_Endpoints.Controllers.Vendor
                 throw new DuplicateEntityException($"A product with SKU '{request.Sku}' already exists.");
             }
 
+            // Updated UpdateAsync call to include request.ImageUrls
             await _productService.UpdateAsync(
                 id,
                 request.Name,
@@ -171,6 +171,7 @@ namespace Catalog_Service.src._03_Endpoints.Controllers.Vendor
                 Weight.Create(request.Weight, "kg"),
                 request.MetaTitle,
                 request.MetaDescription,
+                request.ImageUrls, // PASS THE LIST OF IMAGE URLS
                 cancellationToken);
 
             var updatedProduct = await _productService.GetByIdAsync(id, vendorUserId, cancellationToken);

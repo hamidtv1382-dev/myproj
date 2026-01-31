@@ -10,19 +10,10 @@ namespace Catalog_Service.src._02_Infrastructure.Configuration
         {
             builder.ToTable("ProductAttributes");
 
-            // تنظیمات کلید اصلی
             builder.HasKey(pa => pa.Id);
 
-            // تنظیمات ویژگی‌ها
             builder.Property(pa => pa.ProductId)
                 .IsRequired();
-            // تنظیمات مربوط به پراپرتی جدید IsDeleted
-            builder.Property(c => c.IsDeleted)
-                .IsRequired()
-                .HasDefaultValue(false);
-
-            builder.Property(pa => pa.ProductVariantId)
-                .IsRequired(false);
 
             builder.Property(pa => pa.Name)
                 .IsRequired()
@@ -36,41 +27,29 @@ namespace Catalog_Service.src._02_Infrastructure.Configuration
                 .IsRequired()
                 .HasDefaultValue(false);
 
-            builder.Property(pa => pa.CreatedAt)
-                .IsRequired();
+            builder.Property(pa => pa.IsDeleted)
+                .IsRequired()
+                .HasDefaultValue(false);
 
-            builder.Property(pa => pa.UpdatedAt)
-                .IsRequired(false);
+            // -------------------------------------------------------
+            // تغییرات کلیدی برای حل خطای Cascade Path:
+            // هر دو رابطه را به Restrict تغییر دادیم.
+            // -------------------------------------------------------
 
-            // تنظیمات روابط با تغییر رفتار حذف
             builder.HasOne(pa => pa.Product)
                 .WithMany(p => p.Attributes)
                 .HasForeignKey(pa => pa.ProductId)
-                .OnDelete(DeleteBehavior.Restrict); // تغییر از Cascade به Restrict
+                .OnDelete(DeleteBehavior.Restrict); // قبلاً Cascade بود
 
             builder.HasOne(pa => pa.ProductVariant)
                 .WithMany(pv => pv.Attributes)
                 .HasForeignKey(pa => pa.ProductVariantId)
-                .OnDelete(DeleteBehavior.Restrict); // تغییر از Cascade به Restrict
+                .OnDelete(DeleteBehavior.Restrict); // قبلاً Cascade بود
 
-            // تنظیمات ایندکس‌های اضافی
-            builder.HasIndex(pa => pa.ProductId)
-                .HasDatabaseName("IX_ProductAttribute_ProductId");
+            builder.HasIndex(pa => pa.ProductId);
+            builder.HasIndex(pa => pa.ProductVariantId);
+            builder.HasIndex(pa => pa.Name);
 
-            builder.HasIndex(pa => pa.ProductVariantId)
-                .HasDatabaseName("IX_ProductAttribute_ProductVariantId");
-
-            builder.HasIndex(pa => pa.Name)
-                .HasDatabaseName("IX_ProductAttribute_Name");
-
-            builder.HasIndex(pa => new { pa.ProductId, pa.Name })
-                .HasDatabaseName("IX_ProductAttribute_ProductId_Name");
-
-            // تنظیمات پیش‌فرض برای مقادیر اختیاری
-            builder.Property(pa => pa.ProductVariantId).HasDefaultValue(null);
-            builder.Property(pa => pa.UpdatedAt).HasDefaultValue(null);
-
-            // اطمینان از اینکه ویژگی یا متعلق به محصول است یا به متغیر محصول
             builder.HasCheckConstraint("CK_ProductAttribute_SingleEntityReference",
                 "(ProductVariantId IS NULL AND IsVariantSpecific = 0) OR " +
                 "(ProductVariantId IS NOT NULL AND IsVariantSpecific = 1)");

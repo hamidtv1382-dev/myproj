@@ -11,14 +11,8 @@ namespace Catalog_Service.src._02_Infrastructure.Configuration
         {
             builder.ToTable("ImageResources");
 
-            // تنظیمات کلید اصلی
             builder.HasKey(i => i.Id);
-            // تنظیمات مربوط به پراپرتی جدید IsDeleted
-            builder.Property(c => c.IsDeleted)
-                .IsRequired()
-                .HasDefaultValue(false);
 
-            // تنظیمات ویژگی‌ها
             builder.Property(i => i.OriginalFileName)
                 .IsRequired()
                 .HasMaxLength(255);
@@ -52,76 +46,67 @@ namespace Catalog_Service.src._02_Infrastructure.Configuration
                 .IsRequired()
                 .HasMaxLength(450);
 
-            builder.Property(i => i.CreatedAt)
-                .IsRequired();
-
-            builder.Property(i => i.UpdatedAt)
-                .IsRequired(false);
-
             builder.Property(i => i.IsPrimary)
+                .IsRequired()
+                .HasDefaultValue(false);
+
+            builder.Property(i => i.IsDeleted)
                 .IsRequired()
                 .HasDefaultValue(false);
 
             builder.Property(i => i.AltText)
                 .HasMaxLength(200);
 
-            // تنظیمات روابط با سایر موجودیت‌ها با استفاده از Shadow Properties
-            // تغییر رفتار حذف به Restrict برای جلوگیری از cascade paths
-            builder.HasOne<Product>()
-                .WithMany(p => p.Images)
-                .HasForeignKey("ProductId")
-                .OnDelete(DeleteBehavior.Restrict); // تغییر از Cascade به Restrict
-
-            builder.HasOne<Category>()
-                .WithMany()
-                .HasForeignKey("CategoryId")
-                .OnDelete(DeleteBehavior.Restrict); // تغییر از Cascade به Restrict
-
-            builder.HasOne<Brand>()
-                .WithMany()
-                .HasForeignKey("BrandId")
-                .OnDelete(DeleteBehavior.Restrict); // تغییر از Cascade به Restrict
-
-            builder.HasOne<ProductVariant>()
-                .WithMany()
-                .HasForeignKey("ProductVariantId")
-                .OnDelete(DeleteBehavior.Restrict); // تغییر از Cascade به Restrict
-
-            // تنظیمات ایندکس‌های اضافی
-            builder.HasIndex(i => i.ImageType)
-                .HasDatabaseName("IX_ImageResource_ImageType");
-
-            builder.HasIndex(i => i.IsPrimary)
-                .HasDatabaseName("IX_ImageResource_IsPrimary");
-
-            builder.HasIndex("ProductId")
-                .HasDatabaseName("IX_ImageResource_ProductId");
-
-            builder.HasIndex("CategoryId")
-                .HasDatabaseName("IX_ImageResource_CategoryId");
-
-            builder.HasIndex("BrandId")
-                .HasDatabaseName("IX_ImageResource_BrandId");
-
-            builder.HasIndex("ProductVariantId")
-                .HasDatabaseName("IX_ImageResource_ProductVariantId");
-
-            // تنظیمات پیش‌فرض برای مقادیر اختیاری
-            builder.Property(i => i.AltText).HasDefaultValue(null);
-            builder.Property(i => i.UpdatedAt).HasDefaultValue(null);
-
-            // Shadow Properties برای روابط
+            // Shadow Properties
             builder.Property<int?>("ProductId");
             builder.Property<int?>("CategoryId");
             builder.Property<int?>("BrandId");
             builder.Property<int?>("ProductVariantId");
+            builder.Property<int?>("ProductReviewId");
 
-            // اطمینان از اینکه هر تصویر فقط به یک موجودیت مرتبط است
+            // Relationships (همه را Restrict کنید تا از Cascade Path جلوگیری شود)
+
+            // 1. Product -> Images (تغییر یافته به Restrict)
+            builder.HasOne<Product>()
+                .WithMany(p => p.Images)
+                .HasForeignKey("ProductId")
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // 2. Category -> Image
+            builder.HasOne<Category>()
+                .WithMany()
+                .HasForeignKey("CategoryId")
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // 3. Brand -> Image
+            builder.HasOne<Brand>()
+                .WithMany()
+                .HasForeignKey("BrandId")
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // 4. ProductVariant -> Image
+            builder.HasOne<ProductVariant>()
+                .WithMany()
+                .HasForeignKey("ProductVariantId")
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // 5. ProductReview -> Images (اینجا را هم Restrict کنید تا با Review Replies تداخل نداشته باشد)
+            builder.HasOne<ProductReview>()
+                .WithMany(pr => pr.Images)
+                .HasForeignKey("ProductReviewId")
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.HasIndex(i => i.ImageType);
+            builder.HasIndex(i => i.IsPrimary);
+            builder.HasIndex("ProductId");
+            builder.HasIndex("ProductReviewId");
+
             builder.HasCheckConstraint("CK_ImageResource_SingleEntityReference",
-                "(ProductId IS NOT NULL AND CategoryId IS NULL AND BrandId IS NULL AND ProductVariantId IS NULL) OR " +
-                "(ProductId IS NULL AND CategoryId IS NOT NULL AND BrandId IS NULL AND ProductVariantId IS NULL) OR " +
-                "(ProductId IS NULL AND CategoryId IS NULL AND BrandId IS NOT NULL AND ProductVariantId IS NULL) OR " +
-                "(ProductId IS NULL AND CategoryId IS NULL AND BrandId IS NULL AND ProductVariantId IS NOT NULL)");
+                "(ProductId IS NOT NULL AND CategoryId IS NULL AND BrandId IS NULL AND ProductVariantId IS NULL AND ProductReviewId IS NULL) OR " +
+                "(ProductId IS NULL AND CategoryId IS NOT NULL AND BrandId IS NULL AND ProductVariantId IS NULL AND ProductReviewId IS NULL) OR " +
+                "(ProductId IS NULL AND CategoryId IS NULL AND BrandId IS NOT NULL AND ProductVariantId IS NULL AND ProductReviewId IS NULL) OR " +
+                "(ProductId IS NULL AND CategoryId IS NULL AND BrandId IS NULL AND ProductVariantId IS NOT NULL AND ProductReviewId IS NULL) OR " +
+                "(ProductId IS NULL AND CategoryId IS NULL AND BrandId IS NULL AND ProductVariantId IS NULL AND ProductReviewId IS NOT NULL)");
         }
     }
 }
